@@ -6,42 +6,8 @@
   <title>まかせてマニュアル｜飲食店専門・動画マニュアル制作代行サービス</title>
   <meta name="description" content="飲食店の業務マニュアルを、動画撮影からNotion管理まで丸ごとお任せ。スタッフ教育の悩みをスッキリ解決します。まずはLINEでお気軽にご相談を。" />
 
-  <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            brand: {
-              50:  '#fff7ed',
-              100: '#ffedd5',
-              200: '#fed7aa',
-              300: '#fdba74',
-              400: '#fb923c',
-              500: '#f97316',
-              600: '#ea580c',
-              700: '#c2410c',
-            },
-            accent: {
-              400: '#34d399',
-              500: '#10b981',
-              600: '#059669',
-            }
-          },
-          fontFamily: {
-            sans: ['"Noto Sans JP"', 'sans-serif'],
-          }
-        }
-      }
-    }
-  </script>
-
-  <!-- Google Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet" />
+  <!-- Tailwind CSS (local build) -->
+  <link rel="stylesheet" href="style.css" />
 
   <style>
     html { scroll-behavior: smooth; }
@@ -109,8 +75,8 @@
      STICKY TOP CTA BAR
      ============================================================ -->
 <div id="sticky-cta" class="fixed bottom-0 left-0 w-full z-50 bg-white border-t border-gray-200 shadow-lg md:hidden px-4 py-3 flex items-center justify-between">
-  <p class="text-xs text-gray-600 leading-tight">まずは無料相談<br><span class="font-bold text-brand-600">LINE登録で特典プレゼント🎁</span></p>
-  <a href="#line-cta" class="btn-line-pulse bg-accent-500 text-white text-sm font-bold px-5 py-2 rounded-full shadow-lg whitespace-nowrap">
+  <p class="text-xs text-gray-600 leading-tight">まずは無料相談<br><span class="font-bold text-orange-600">LINE登録で特典プレゼント🎁</span></p>
+  <a href="#line-cta" class="btn-line-pulse bg-emerald-500 text-white text-sm font-bold px-5 py-2 rounded-full shadow-lg whitespace-nowrap">
     LINEで相談する
   </a>
 </div>
@@ -123,12 +89,12 @@
     <!-- Logo -->
     <div class="flex items-center gap-2">
       <span class="text-2xl">🍽️</span>
-      <span class="font-black text-xl text-brand-600 tracking-tight">まかせてマニュアル</span>
-      <span class="hidden sm:inline-block text-xs bg-brand-100 text-brand-700 font-bold px-2 py-0.5 rounded-full">飲食店専門</span>
+      <span class="font-black text-xl text-orange-600 tracking-tight">まかせてマニュアル</span>
+      <span class="hidden sm:inline-block text-xs bg-orange-100 text-orange-700 font-bold px-2 py-0.5 rounded-full">飲食店専門</span>
     </div>
     <!-- Nav CTA -->
     <a href="#line-cta"
-       class="bg-accent-500 hover:bg-accent-600 text-white text-sm font-bold px-5 py-2 rounded-full shadow transition hidden sm:block">
+       class="bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-bold px-5 py-2 rounded-full shadow transition hidden sm:block">
       📱 LINEで無料相談
     </a>
   </div>
@@ -143,12 +109,12 @@
 
     <!-- Text -->
     <div class="flex-1 text-center md:text-left">
-      <div class="inline-block bg-brand-500 text-white text-xs font-bold px-3 py-1 rounded-full mb-4">
+      <div class="inline-block bg-orange-500 text-white text-xs font-bold px-3 py-1 rounded-full mb-4">
         🎬 動画撮影〜Notion管理まで一気通貫！
       </div>
       <h1 class="text-3xl md:text-5xl font-black leading-tight text-gray-900 mb-4">
         飲食店の<br class="hidden md:block" />
-        <span class="text-brand-600">マニュアル作り</span>、<br />
+        <span class="text-orange-600">マニュアル作り</span>、<br />
         もう一人で<br class="hidden md:block" />悩まなくていい。
       </h1>
       <p class="text-base md:text-lg text-gray-600 mb-6 leading-relaxed">
@@ -160,17 +126,17 @@
       <!-- Stats row -->
       <div class="flex gap-6 justify-center md:justify-start mb-8">
         <div class="text-center">
-          <p class="text-3xl font-black text-brand-600">98<span class="text-lg">%</span></p>
+          <p class="text-3xl font-black text-orange-600">98<span class="text-lg">%</span></p>
           <p class="text-xs text-gray-500">導入店満足度</p>
         </div>
         <div class="w-px bg-gray-200"></div>
         <div class="text-center">
-          <p class="text-3xl font-black text-brand-600">最短<span class="text-lg">2週</span></p>
+          <p class="text-3xl font-black text-orange-600">最短<span class="text-lg">2週</span></p>
           <p class="text-xs text-gray-500">納品スピード</p>
         </div>
         <div class="w-px bg-gray-200"></div>
         <div class="text-center">
-          <p class="text-3xl font-black text-brand-600">50<span class="text-lg">+</span></p>
+          <p class="text-3xl font-black text-orange-600">50<span class="text-lg">+</span></p>
           <p class="text-xs text-gray-500">導入店舗数</p>
         </div>
       </div>
@@ -178,7 +144,7 @@
       <!-- CTA Buttons -->
       <div class="flex flex-col sm:flex-row gap-3 justify-center md:justify-start">
         <a href="#line-cta"
-           class="btn-float btn-line-pulse bg-accent-500 hover:bg-accent-600 text-white font-black text-lg px-8 py-4 rounded-full shadow-xl transition text-center">
+           class="btn-float btn-line-pulse bg-emerald-500 hover:bg-emerald-600 text-white font-black text-lg px-8 py-4 rounded-full shadow-xl transition text-center">
           📱 LINEで無料相談する
         </a>
         <a href="#pricing"
@@ -227,7 +193,7 @@
           </div>
         </div>
         <!-- Badge -->
-        <div class="absolute -top-3 -right-3 bg-brand-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow">
+        <div class="absolute -top-3 -right-3 bg-orange-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow">
           いつでも更新OK!
         </div>
       </div>
@@ -243,32 +209,32 @@
 <section class="py-16 bg-gray-50">
   <div class="max-w-4xl mx-auto px-4">
     <div class="text-center mb-10 reveal">
-      <p class="text-brand-600 font-bold text-sm mb-2">😫 こんなお悩みありませんか？</p>
+      <p class="text-orange-600 font-bold text-sm mb-2">😫 こんなお悩みありませんか？</p>
       <h2 class="text-2xl md:text-3xl font-black">飲食店のマニュアルって、<br />本当に大変ですよね</h2>
     </div>
     <div class="grid md:grid-cols-2 gap-4">
-      <div class="reveal bg-white rounded-2xl p-5 shadow flex gap-4 items-start border-l-4 border-brand-400">
+      <div class="reveal bg-white rounded-2xl p-5 shadow flex gap-4 items-start border-l-4 border-orange-400">
         <span class="text-3xl flex-shrink-0">📖</span>
         <div>
           <p class="font-bold mb-1">マニュアルを作る時間がない</p>
           <p class="text-sm text-gray-500">毎日の仕込みや接客で手いっぱい。マニュアル作りは後回しになり続けている…</p>
         </div>
       </div>
-      <div class="reveal bg-white rounded-2xl p-5 shadow flex gap-4 items-start border-l-4 border-brand-400">
+      <div class="reveal bg-white rounded-2xl p-5 shadow flex gap-4 items-start border-l-4 border-orange-400">
         <span class="text-3xl flex-shrink-0">🔄</span>
         <div>
           <p class="font-bold mb-1">スタッフが辞めるたびにゼロから</p>
           <p class="text-sm text-gray-500">離職のたびに口頭で一から教え直し。属人化した業務が店の負担になっている</p>
         </div>
       </div>
-      <div class="reveal bg-white rounded-2xl p-5 shadow flex gap-4 items-start border-l-4 border-brand-400">
+      <div class="reveal bg-white rounded-2xl p-5 shadow flex gap-4 items-start border-l-4 border-orange-400">
         <span class="text-3xl flex-shrink-0">🤷</span>
         <div>
           <p class="font-bold mb-1">文字マニュアルを読んでくれない</p>
           <p class="text-sm text-gray-500">せっかく作ったPDFをスタッフが見ない。口頭説明と変わらない状態が続く</p>
         </div>
       </div>
-      <div class="reveal bg-white rounded-2xl p-5 shadow flex gap-4 items-start border-l-4 border-brand-400">
+      <div class="reveal bg-white rounded-2xl p-5 shadow flex gap-4 items-start border-l-4 border-orange-400">
         <span class="text-3xl flex-shrink-0">💸</span>
         <div>
           <p class="font-bold mb-1">制作会社に頼むと高すぎる</p>
@@ -277,7 +243,7 @@
       </div>
     </div>
     <div class="text-center mt-10 reveal">
-      <div class="inline-block bg-brand-500 text-white font-black text-lg px-8 py-4 rounded-2xl shadow-lg">
+      <div class="inline-block bg-orange-500 text-white font-black text-lg px-8 py-4 rounded-2xl shadow-lg">
         👆 全部、まかせてマニュアルで解決できます！
       </div>
     </div>
@@ -291,7 +257,7 @@
 <section class="py-16 bg-white">
   <div class="max-w-5xl mx-auto px-4">
     <div class="text-center mb-12 reveal">
-      <p class="text-brand-600 font-bold text-sm mb-2">✨ 選ばれる理由</p>
+      <p class="text-orange-600 font-bold text-sm mb-2">✨ 選ばれる理由</p>
       <h2 class="text-2xl md:text-3xl font-black">まかせてマニュアルの<br />4つの強み</h2>
     </div>
     <div class="grid md:grid-cols-2 gap-8">
@@ -301,7 +267,7 @@
         <div class="flex items-center gap-3 mb-4">
           <span class="text-4xl">🎬</span>
           <div>
-            <span class="text-xs bg-brand-500 text-white font-bold px-2 py-0.5 rounded-full">最大の強み</span>
+            <span class="text-xs bg-orange-500 text-white font-bold px-2 py-0.5 rounded-full">最大の強み</span>
             <h3 class="font-black text-lg mt-1">動画撮影から代行します</h3>
           </div>
         </div>
@@ -367,7 +333,7 @@
 <section class="py-16 bg-orange-50">
   <div class="max-w-4xl mx-auto px-4">
     <div class="text-center mb-12 reveal">
-      <p class="text-brand-600 font-bold text-sm mb-2">🗓️ サービスの流れ</p>
+      <p class="text-orange-600 font-bold text-sm mb-2">🗓️ サービスの流れ</p>
       <h2 class="text-2xl md:text-3xl font-black">お申し込みから納品まで</h2>
       <p class="text-gray-500 text-sm mt-2">最短2週間でマニュアルが完成します</p>
     </div>
@@ -375,7 +341,7 @@
     <div class="space-y-4">
       <!-- Step 1 -->
       <div class="reveal flex items-start gap-5 bg-white rounded-2xl p-5 shadow-sm">
-        <div class="flex-shrink-0 w-12 h-12 bg-brand-500 text-white rounded-2xl flex items-center justify-center font-black text-xl shadow">1</div>
+        <div class="flex-shrink-0 w-12 h-12 bg-orange-500 text-white rounded-2xl flex items-center justify-center font-black text-xl shadow">1</div>
         <div class="flex-1">
           <div class="flex items-center gap-2 mb-1">
             <h3 class="font-bold text-base">LINEでお問い合わせ・ヒアリング</h3>
@@ -386,11 +352,11 @@
         <span class="flex-shrink-0 text-2xl">📱</span>
       </div>
 
-      <div class="flex justify-center text-brand-400 text-2xl">↓</div>
+      <div class="flex justify-center text-orange-400 text-2xl">↓</div>
 
       <!-- Step 2 -->
       <div class="reveal flex items-start gap-5 bg-white rounded-2xl p-5 shadow-sm">
-        <div class="flex-shrink-0 w-12 h-12 bg-brand-500 text-white rounded-2xl flex items-center justify-center font-black text-xl shadow">2</div>
+        <div class="flex-shrink-0 w-12 h-12 bg-orange-500 text-white rounded-2xl flex items-center justify-center font-black text-xl shadow">2</div>
         <div class="flex-1">
           <h3 class="font-bold text-base mb-1">現地での動画撮影</h3>
           <p class="text-sm text-gray-500">担当者がお店にお伺いし、実際の業務や調理工程を動画撮影。スタッフの方に特別な準備は不要です。</p>
@@ -398,11 +364,11 @@
         <span class="flex-shrink-0 text-2xl">🎬</span>
       </div>
 
-      <div class="flex justify-center text-brand-400 text-2xl">↓</div>
+      <div class="flex justify-center text-orange-400 text-2xl">↓</div>
 
       <!-- Step 3 -->
       <div class="reveal flex items-start gap-5 bg-white rounded-2xl p-5 shadow-sm">
-        <div class="flex-shrink-0 w-12 h-12 bg-brand-500 text-white rounded-2xl flex items-center justify-center font-black text-xl shadow">3</div>
+        <div class="flex-shrink-0 w-12 h-12 bg-orange-500 text-white rounded-2xl flex items-center justify-center font-black text-xl shadow">3</div>
         <div class="flex-1">
           <h3 class="font-bold text-base mb-1">動画編集・Notionマニュアルページ作成</h3>
           <p class="text-sm text-gray-500">撮影素材を編集し、テキスト・画像と組み合わせてわかりやすいNotionマニュアルページを制作します。</p>
@@ -410,11 +376,11 @@
         <span class="flex-shrink-0 text-2xl">✏️</span>
       </div>
 
-      <div class="flex justify-center text-brand-400 text-2xl">↓</div>
+      <div class="flex justify-center text-orange-400 text-2xl">↓</div>
 
       <!-- Step 4 -->
       <div class="reveal flex items-start gap-5 bg-white rounded-2xl p-5 shadow-sm">
-        <div class="flex-shrink-0 w-12 h-12 bg-brand-500 text-white rounded-2xl flex items-center justify-center font-black text-xl shadow">4</div>
+        <div class="flex-shrink-0 w-12 h-12 bg-orange-500 text-white rounded-2xl flex items-center justify-center font-black text-xl shadow">4</div>
         <div class="flex-1">
           <h3 class="font-bold text-base mb-1">納品・スタッフへの共有サポート</h3>
           <p class="text-sm text-gray-500">完成したマニュアルをご確認いただき、スタッフへの展開方法もサポート。すぐに現場で使い始められます。</p>
@@ -422,15 +388,15 @@
         <span class="flex-shrink-0 text-2xl">🎉</span>
       </div>
 
-      <div class="flex justify-center text-brand-400 text-2xl">↓</div>
+      <div class="flex justify-center text-orange-400 text-2xl">↓</div>
 
       <!-- Step 5 -->
-      <div class="reveal flex items-start gap-5 bg-white rounded-2xl p-5 shadow-sm border-2 border-accent-500">
-        <div class="flex-shrink-0 w-12 h-12 bg-accent-500 text-white rounded-2xl flex items-center justify-center font-black text-xl shadow">5</div>
+      <div class="reveal flex items-start gap-5 bg-white rounded-2xl p-5 shadow-sm border-2 border-emerald-500">
+        <div class="flex-shrink-0 w-12 h-12 bg-emerald-500 text-white rounded-2xl flex items-center justify-center font-black text-xl shadow">5</div>
         <div class="flex-1">
           <div class="flex items-center gap-2 mb-1">
             <h3 class="font-bold text-base">継続的な運用サポート・保守</h3>
-            <span class="text-xs bg-brand-100 text-brand-700 font-bold px-2 py-0.5 rounded-full">月額プランで対応</span>
+            <span class="text-xs bg-orange-100 text-orange-700 font-bold px-2 py-0.5 rounded-full">月額プランで対応</span>
           </div>
           <p class="text-sm text-gray-500">メニュー変更や手順見直しに合わせてマニュアルを更新。いつでも最新状態を保ちます。</p>
         </div>
@@ -447,14 +413,14 @@
 <section class="py-16 bg-white">
   <div class="max-w-4xl mx-auto px-4">
     <div class="text-center mb-10 reveal">
-      <p class="text-brand-600 font-bold text-sm mb-2">📊 他社との比較</p>
+      <p class="text-orange-600 font-bold text-sm mb-2">📊 他社との比較</p>
       <h2 class="text-2xl md:text-3xl font-black">なぜ「まかせてマニュアル」が<br />選ばれるのか</h2>
     </div>
 
     <div class="reveal overflow-x-auto rounded-2xl shadow-md">
       <table class="compare-table w-full text-sm border-collapse">
         <thead>
-          <tr class="bg-brand-500 text-white">
+          <tr class="bg-orange-500 text-white">
             <th class="text-left px-4 py-3 font-bold w-2/5">比較項目</th>
             <th class="px-4 py-3 font-bold text-center">
               <div class="flex flex-col items-center">
@@ -477,37 +443,37 @@
         <tbody>
           <tr>
             <td class="px-4 py-3 font-medium">動画撮影の代行</td>
-            <td class="px-4 py-3 text-center text-accent-600 font-bold text-lg">✅</td>
+            <td class="px-4 py-3 text-center text-emerald-600 font-bold text-lg">✅</td>
             <td class="px-4 py-3 text-center text-gray-400">△<span class="text-xs block text-gray-400">別途見積</span></td>
             <td class="px-4 py-3 text-center text-red-400">✗</td>
           </tr>
           <tr>
             <td class="px-4 py-3 font-medium">動画編集</td>
-            <td class="px-4 py-3 text-center text-accent-600 font-bold text-lg">✅</td>
-            <td class="px-4 py-3 text-center text-accent-600 font-bold text-lg">✅</td>
+            <td class="px-4 py-3 text-center text-emerald-600 font-bold text-lg">✅</td>
+            <td class="px-4 py-3 text-center text-emerald-600 font-bold text-lg">✅</td>
             <td class="px-4 py-3 text-center text-red-400">✗</td>
           </tr>
           <tr>
             <td class="px-4 py-3 font-medium">Notionでクラウド管理</td>
-            <td class="px-4 py-3 text-center text-accent-600 font-bold text-lg">✅</td>
+            <td class="px-4 py-3 text-center text-emerald-600 font-bold text-lg">✅</td>
             <td class="px-4 py-3 text-center text-gray-400">△<span class="text-xs block text-gray-400">PDF納品が多い</span></td>
             <td class="px-4 py-3 text-center text-gray-400">△</td>
           </tr>
           <tr>
             <td class="px-4 py-3 font-medium">飲食店への特化知識</td>
-            <td class="px-4 py-3 text-center text-accent-600 font-bold text-lg">✅</td>
+            <td class="px-4 py-3 text-center text-emerald-600 font-bold text-lg">✅</td>
             <td class="px-4 py-3 text-center text-red-400">✗</td>
             <td class="px-4 py-3 text-center text-gray-400">△</td>
           </tr>
           <tr>
             <td class="px-4 py-3 font-medium">運用後のマニュアル更新</td>
-            <td class="px-4 py-3 text-center text-accent-600 font-bold text-lg">✅</td>
+            <td class="px-4 py-3 text-center text-emerald-600 font-bold text-lg">✅</td>
             <td class="px-4 py-3 text-center text-gray-400">△<span class="text-xs block text-gray-400">追加料金</span></td>
             <td class="px-4 py-3 text-center text-gray-400">△<span class="text-xs block text-gray-400">手間がかかる</span></td>
           </tr>
           <tr>
             <td class="px-4 py-3 font-medium">コスト</td>
-            <td class="px-4 py-3 text-center text-accent-600 font-bold">💰 リーズナブル</td>
+            <td class="px-4 py-3 text-center text-emerald-600 font-bold">💰 リーズナブル</td>
             <td class="px-4 py-3 text-center text-red-400 font-bold">💸 高額になりがち</td>
             <td class="px-4 py-3 text-center text-gray-400">⏰ 工数大</td>
           </tr>
@@ -524,7 +490,7 @@
 <section id="pricing" class="py-16 bg-orange-50">
   <div class="max-w-4xl mx-auto px-4">
     <div class="text-center mb-12 reveal">
-      <p class="text-brand-600 font-bold text-sm mb-2">💰 料金プラン</p>
+      <p class="text-orange-600 font-bold text-sm mb-2">💰 料金プラン</p>
       <h2 class="text-2xl md:text-3xl font-black">シンプルでわかりやすい料金設定</h2>
       <p class="text-gray-500 text-sm mt-2">すべて税込価格です</p>
     </div>
@@ -538,18 +504,18 @@
           <p class="text-xs text-gray-400 mb-4">小規模店舗・まずは試してみたい方に</p>
           <div class="mb-2">
             <p class="text-xs text-gray-500">初期費用（制作費）</p>
-            <p class="text-3xl font-black text-gray-900">¥<span class="text-brand-600">50,000</span> <span class="text-base font-normal text-gray-500">〜</span></p>
+            <p class="text-3xl font-black text-gray-900">¥<span class="text-orange-600">50,000</span> <span class="text-base font-normal text-gray-500">〜</span></p>
           </div>
           <div>
             <p class="text-xs text-gray-500">月額（運用サポート）</p>
-            <p class="text-3xl font-black text-gray-900">¥<span class="text-brand-600">9,800</span> <span class="text-base font-normal text-gray-500">/ 月</span></p>
+            <p class="text-3xl font-black text-gray-900">¥<span class="text-orange-600">9,800</span> <span class="text-base font-normal text-gray-500">/ 月</span></p>
           </div>
         </div>
         <ul class="space-y-2 mb-6 text-sm text-gray-600">
-          <li class="flex items-center gap-2"><span class="text-accent-500 font-bold">✔</span> マニュアルページ 最大10ページ</li>
-          <li class="flex items-center gap-2"><span class="text-accent-500 font-bold">✔</span> 動画撮影・編集（最大3本）</li>
-          <li class="flex items-center gap-2"><span class="text-accent-500 font-bold">✔</span> Notionクラウド管理</li>
-          <li class="flex items-center gap-2"><span class="text-accent-500 font-bold">✔</span> 月1回の更新サポート</li>
+          <li class="flex items-center gap-2"><span class="text-emerald-500 font-bold">✔</span> マニュアルページ 最大10ページ</li>
+          <li class="flex items-center gap-2"><span class="text-emerald-500 font-bold">✔</span> 動画撮影・編集（最大3本）</li>
+          <li class="flex items-center gap-2"><span class="text-emerald-500 font-bold">✔</span> Notionクラウド管理</li>
+          <li class="flex items-center gap-2"><span class="text-emerald-500 font-bold">✔</span> 月1回の更新サポート</li>
           <li class="flex items-center gap-2"><span class="text-gray-300 font-bold">✗</span> <span class="text-gray-400">訪問サポート</span></li>
         </ul>
         <a href="#line-cta" class="block w-full text-center bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 rounded-xl transition">
@@ -558,36 +524,36 @@
       </div>
 
       <!-- Plan: Standard (Recommended) -->
-      <div class="reveal bg-white rounded-3xl shadow-xl p-7 border-2 border-brand-500 relative">
-        <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-brand-500 text-white text-xs font-black px-4 py-1 rounded-full">
+      <div class="reveal bg-white rounded-3xl shadow-xl p-7 border-2 border-orange-500 relative">
+        <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-orange-500 text-white text-xs font-black px-4 py-1 rounded-full">
           🌟 人気No.1
         </div>
         <div class="mb-4">
-          <p class="text-sm font-bold text-brand-600 mb-1">🚀 スタンダードプラン</p>
+          <p class="text-sm font-bold text-orange-600 mb-1">🚀 スタンダードプラン</p>
           <p class="text-xs text-gray-400 mb-4">複数業務を網羅したい・本格導入したい方に</p>
           <div class="mb-2">
             <p class="text-xs text-gray-500">初期費用（制作費）</p>
-            <p class="text-3xl font-black text-gray-900">¥<span class="text-brand-600">80,000</span> <span class="text-base font-normal text-gray-500">〜</span></p>
+            <p class="text-3xl font-black text-gray-900">¥<span class="text-orange-600">80,000</span> <span class="text-base font-normal text-gray-500">〜</span></p>
           </div>
           <div>
             <p class="text-xs text-gray-500">月額（運用サポート）</p>
-            <p class="text-3xl font-black text-gray-900">¥<span class="text-brand-600">19,800</span> <span class="text-base font-normal text-gray-500">/ 月</span></p>
+            <p class="text-3xl font-black text-gray-900">¥<span class="text-orange-600">19,800</span> <span class="text-base font-normal text-gray-500">/ 月</span></p>
           </div>
         </div>
         <ul class="space-y-2 mb-6 text-sm text-gray-600">
-          <li class="flex items-center gap-2"><span class="text-accent-500 font-bold">✔</span> マニュアルページ 最大30ページ</li>
-          <li class="flex items-center gap-2"><span class="text-accent-500 font-bold">✔</span> 動画撮影・編集（最大10本）</li>
-          <li class="flex items-center gap-2"><span class="text-accent-500 font-bold">✔</span> Notionクラウド管理</li>
-          <li class="flex items-center gap-2"><span class="text-accent-500 font-bold">✔</span> 月4回の更新サポート</li>
-          <li class="flex items-center gap-2"><span class="text-accent-500 font-bold">✔</span> 月1回の訪問サポート</li>
+          <li class="flex items-center gap-2"><span class="text-emerald-500 font-bold">✔</span> マニュアルページ 最大30ページ</li>
+          <li class="flex items-center gap-2"><span class="text-emerald-500 font-bold">✔</span> 動画撮影・編集（最大10本）</li>
+          <li class="flex items-center gap-2"><span class="text-emerald-500 font-bold">✔</span> Notionクラウド管理</li>
+          <li class="flex items-center gap-2"><span class="text-emerald-500 font-bold">✔</span> 月4回の更新サポート</li>
+          <li class="flex items-center gap-2"><span class="text-emerald-500 font-bold">✔</span> 月1回の訪問サポート</li>
         </ul>
-        <a href="#line-cta" class="block w-full text-center bg-brand-500 hover:bg-brand-600 text-white font-bold py-3 rounded-xl transition shadow-lg">
+        <a href="#line-cta" class="block w-full text-center bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-xl transition shadow-lg">
           このプランで相談する
         </a>
       </div>
     </div>
 
-    <div class="reveal mt-8 bg-white rounded-2xl p-5 border border-dashed border-brand-300 text-center">
+    <div class="reveal mt-8 bg-white rounded-2xl p-5 border border-dashed border-orange-300 text-center">
       <p class="font-bold text-gray-700 mb-1">📌 ご注意・カスタムプランについて</p>
       <p class="text-sm text-gray-500">料金はページ数・動画本数・店舗規模によって異なります。上記はあくまでも目安です。<br />まずはLINEにてお気軽にご相談ください。お見積もりは無料です。</p>
     </div>
@@ -601,7 +567,7 @@
 <section class="py-16 bg-white">
   <div class="max-w-3xl mx-auto px-4">
     <div class="text-center mb-10 reveal">
-      <p class="text-brand-600 font-bold text-sm mb-2">❓ よくある質問</p>
+      <p class="text-orange-600 font-bold text-sm mb-2">❓ よくある質問</p>
       <h2 class="text-2xl md:text-3xl font-black">FAQ</h2>
     </div>
 
@@ -610,7 +576,7 @@
       <div class="faq-item reveal bg-gray-50 rounded-2xl overflow-hidden border border-gray-100">
         <button class="faq-toggle w-full flex items-center justify-between px-5 py-4 text-left font-bold text-gray-800">
           <span>どんな業種の飲食店でも対応できますか？</span>
-          <span class="faq-icon text-brand-500 text-xl font-black flex-shrink-0 ml-2">＋</span>
+          <span class="faq-icon text-orange-500 text-xl font-black flex-shrink-0 ml-2">＋</span>
         </button>
         <div class="faq-answer px-5 pb-4 text-sm text-gray-600 leading-relaxed">
           レストラン・居酒屋・カフェ・ラーメン店・焼肉店・テイクアウト専門店など、あらゆる飲食業態に対応しています。
@@ -621,7 +587,7 @@
       <div class="faq-item reveal bg-gray-50 rounded-2xl overflow-hidden border border-gray-100">
         <button class="faq-toggle w-full flex items-center justify-between px-5 py-4 text-left font-bold text-gray-800">
           <span>動画撮影はいつ・どこで行いますか？</span>
-          <span class="faq-icon text-brand-500 text-xl font-black flex-shrink-0 ml-2">＋</span>
+          <span class="faq-icon text-orange-500 text-xl font-black flex-shrink-0 ml-2">＋</span>
         </button>
         <div class="faq-answer px-5 pb-4 text-sm text-gray-600 leading-relaxed">
           担当者がお店にお伺いし、通常の営業時間外（仕込み時間・閉店後など）に撮影します。
@@ -632,7 +598,7 @@
       <div class="faq-item reveal bg-gray-50 rounded-2xl overflow-hidden border border-gray-100">
         <button class="faq-toggle w-full flex items-center justify-between px-5 py-4 text-left font-bold text-gray-800">
           <span>Notionをこれまで使ったことがないのですが大丈夫ですか？</span>
-          <span class="faq-icon text-brand-500 text-xl font-black flex-shrink-0 ml-2">＋</span>
+          <span class="faq-icon text-orange-500 text-xl font-black flex-shrink-0 ml-2">＋</span>
         </button>
         <div class="faq-answer px-5 pb-4 text-sm text-gray-600 leading-relaxed">
           もちろん大丈夫です！Notionは無料で使えるクラウドツールで、スマホのブラウザから簡単に閲覧できます。
@@ -643,7 +609,7 @@
       <div class="faq-item reveal bg-gray-50 rounded-2xl overflow-hidden border border-gray-100">
         <button class="faq-toggle w-full flex items-center justify-between px-5 py-4 text-left font-bold text-gray-800">
           <span>対応エリアはどこですか？</span>
-          <span class="faq-icon text-brand-500 text-xl font-black flex-shrink-0 ml-2">＋</span>
+          <span class="faq-icon text-orange-500 text-xl font-black flex-shrink-0 ml-2">＋</span>
         </button>
         <div class="faq-answer px-5 pb-4 text-sm text-gray-600 leading-relaxed">
           現在は【対応エリアを入力してください】を中心に対応しています。
@@ -654,7 +620,7 @@
       <div class="faq-item reveal bg-gray-50 rounded-2xl overflow-hidden border border-gray-100">
         <button class="faq-toggle w-full flex items-center justify-between px-5 py-4 text-left font-bold text-gray-800">
           <span>最低契約期間はありますか？</span>
-          <span class="faq-icon text-brand-500 text-xl font-black flex-shrink-0 ml-2">＋</span>
+          <span class="faq-icon text-orange-500 text-xl font-black flex-shrink-0 ml-2">＋</span>
         </button>
         <div class="faq-answer px-5 pb-4 text-sm text-gray-600 leading-relaxed">
           月額プランの最低契約期間は3ヶ月です。それ以降は月単位での継続となり、いつでも解約可能です。
@@ -665,7 +631,7 @@
       <div class="faq-item reveal bg-gray-50 rounded-2xl overflow-hidden border border-gray-100">
         <button class="faq-toggle w-full flex items-center justify-between px-5 py-4 text-left font-bold text-gray-800">
           <span>相談から契約までどのくらいかかりますか？</span>
-          <span class="faq-icon text-brand-500 text-xl font-black flex-shrink-0 ml-2">＋</span>
+          <span class="faq-icon text-orange-500 text-xl font-black flex-shrink-0 ml-2">＋</span>
         </button>
         <div class="faq-answer px-5 pb-4 text-sm text-gray-600 leading-relaxed">
           LINEでのヒアリング → お見積もり提出 → ご契約まで、通常3〜5営業日程度です。
@@ -681,7 +647,7 @@
 <!-- ============================================================
      FINAL CTA（LINE登録）
      ============================================================ -->
-<section id="line-cta" class="py-20 bg-gradient-to-br from-accent-500 to-teal-600">
+<section id="line-cta" class="py-20 bg-gradient-to-br from-emerald-500 to-teal-600">
   <div class="max-w-2xl mx-auto px-4 text-center">
     <div class="reveal">
       <p class="text-white/80 text-sm font-bold mb-3">📱 まずは気軽に</p>
@@ -704,7 +670,7 @@
       <a href="https://lin.ee/XXXXXXXX"
          target="_blank"
          rel="noopener noreferrer"
-         class="btn-line-pulse inline-flex items-center gap-3 bg-white text-accent-600 font-black text-xl px-10 py-5 rounded-full shadow-2xl hover:shadow-3xl transition transform hover:-translate-y-1">
+         class="btn-line-pulse inline-flex items-center gap-3 bg-white text-emerald-600 font-black text-xl px-10 py-5 rounded-full shadow-2xl hover:shadow-3xl transition transform hover:-translate-y-1">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-8 h-8">
           <path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63h2.386c.349 0 .63.285.63.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63.349 0 .631.285.631.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.281.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/>
         </svg>
