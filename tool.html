@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>動画マニュアル自動生成ツール</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Noto Sans JP", "Hiragino Sans", sans-serif;
+      background: #f5f5f0;
+      color: #1a1a1a;
+      min-height: 100vh;
+      padding: 24px 16px;
+    }
+
+    .container {
+      max-width: 760px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    header h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #111;
+    }
+
+    header p {
+      color: #666;
+      font-size: 0.9rem;
+      margin-top: 6px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      margin-bottom: 20px;
+    }
+
+    .card h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: #333;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 10px;
+    }
+
+    input[type="url"] {
+      flex: 1;
+      padding: 12px 14px;
+      border: 1.5px solid #ddd;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input[type="url"]:focus {
+      border-color: #4f46e5;
+    }
+
+    .btn {
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+      white-space: nowrap;
+    }
+
+    .btn:hover:not(:disabled) { opacity: 0.88; }
+    .btn:active:not(:disabled) { transform: scale(0.98); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-primary { background: #4f46e5; color: #fff; }
+    .btn-success { background: #16a34a; color: #fff; }
+    .btn-outline {
+      background: transparent;
+      color: #4f46e5;
+      border: 1.5px solid #4f46e5;
+    }
+
+    .status {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      margin-top: 12px;
+    }
+
+    .status.loading { background: #eff6ff; color: #1d4ed8; display: flex; }
+    .status.error   { background: #fef2f2; color: #b91c1c; display: flex; }
+    .status.success { background: #f0fdf4; color: #15803d; display: flex; }
+
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2.5px solid currentColor;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* プレビューエリア */
+    .preview-section { display: none; }
+
+    .recipe-field { margin-bottom: 18px; }
+
+    .recipe-field label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #555;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .recipe-field input,
+    .recipe-field textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1.5px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-family: inherit;
+      outline: none;
+      resize: vertical;
+      transition: border-color 0.2s;
+    }
+
+    .recipe-field input:focus,
+    .recipe-field textarea:focus {
+      border-color: #4f46e5;
+    }
+
+    /* 材料テーブル */
+    .ingredients-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 8px;
+    }
+
+    .ingredients-table th {
+      text-align: left;
+      font-size: 0.82rem;
+      color: #888;
+      padding: 4px 8px;
+      border-bottom: 1.5px solid #eee;
+    }
+
+    .ingredients-table td { padding: 4px 6px; }
+
+    .ingredients-table input {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1.5px solid #e0e0e0;
+      border-radius: 6px;
+      font-size: 0.92rem;
+      outline: none;
+    }
+
+    .ingredients-table input:focus { border-color: #4f46e5; }
+
+    .btn-add {
+      font-size: 0.85rem;
+      padding: 7px 14px;
+      border-radius: 6px;
+    }
+
+    /* 調理手順 */
+    .steps-list { list-style: none; counter-reset: step-counter; }
+
+    .step-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 8px;
+      counter-increment: step-counter;
+    }
+
+    .step-number {
+      width: 26px; height: 26px;
+      background: #4f46e5;
+      color: #fff;
+      border-radius: 50%;
+      font-size: 0.78rem;
+      font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      margin-top: 8px;
+    }
+
+    .step-item textarea {
+      flex: 1;
+      padding: 8px 10px;
+      border: 1.5px solid #e0e0e0;
+      border-radius: 6px;
+      font-size: 0.92rem;
+      font-family: inherit;
+      resize: vertical;
+      outline: none;
+      min-height: 42px;
+    }
+
+    .step-item textarea:focus { border-color: #4f46e5; }
+
+    .btn-remove {
+      background: none;
+      border: none;
+      color: #aaa;
+      cursor: pointer;
+      font-size: 1.2rem;
+      padding: 4px;
+      margin-top: 6px;
+      transition: color 0.2s;
+    }
+    .btn-remove:hover { color: #ef4444; }
+
+    /* Notionアクション */
+    .notion-result {
+      display: none;
+      padding: 14px 16px;
+      background: #f0fdf4;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      color: #15803d;
+    }
+
+    .notion-result a {
+      color: #16a34a;
+      font-weight: 600;
+    }
+
+    .action-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    /* 文字起こし */
+    .transcript-box {
+      background: #f9f9f9;
+      border: 1.5px solid #e8e8e8;
+      border-radius: 8px;
+      padding: 14px;
+      font-size: 0.88rem;
+      line-height: 1.7;
+      color: #444;
+      max-height: 180px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
+
+    @media (max-width: 560px) {
+      .input-group { flex-direction: column; }
+      .btn { width: 100%; }
+      .action-row { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>動画マニュアル自動生成ツール</h1>
+    <p>YouTube限定公開URLを入力するだけで、NotionレシピページをAIが自動生成します</p>
+  </header>
+
+  <!-- Step 1: URL入力 -->
+  <div class="card">
+    <h2>Step 1 — YouTube URLを入力</h2>
+    <div class="input-group">
+      <input type="url" id="youtube-url" placeholder="https://www.youtube.com/watch?v=..." />
+      <button class="btn btn-primary" id="btn-process" onclick="processVideo()">解析開始</button>
+    </div>
+    <div class="status" id="status-process">
+      <div class="spinner"></div>
+      <span id="status-process-msg">処理中…</span>
+    </div>
+  </div>
+
+  <!-- Step 2: プレビュー・編集 -->
+  <div class="card preview-section" id="preview-section">
+    <h2>Step 2 — 内容を確認・修正</h2>
+
+    <div class="recipe-field">
+      <label>レシピ名</label>
+      <input type="text" id="recipe-name" placeholder="例：唐揚げの作り方" />
+    </div>
+
+    <div class="recipe-field">
+      <label>カテゴリ</label>
+      <input type="text" id="recipe-category" placeholder="例：揚げ物" />
+    </div>
+
+    <div class="recipe-field">
+      <label>材料・分量</label>
+      <table class="ingredients-table">
+        <thead>
+          <tr>
+            <th style="width:55%">材料名</th>
+            <th style="width:35%">分量</th>
+            <th style="width:10%"></th>
+          </tr>
+        </thead>
+        <tbody id="ingredients-body"></tbody>
+      </table>
+      <button class="btn btn-outline btn-add" onclick="addIngredient()">+ 材料を追加</button>
+    </div>
+
+    <div class="recipe-field">
+      <label>調理手順</label>
+      <ul class="steps-list" id="steps-list"></ul>
+      <button class="btn btn-outline btn-add" onclick="addStep()">+ 手順を追加</button>
+    </div>
+
+    <div class="recipe-field">
+      <label>メモ・ポイント</label>
+      <textarea id="recipe-memo" rows="3" placeholder="ポイントや注意事項など（任意）"></textarea>
+    </div>
+
+    <details style="margin-bottom:18px">
+      <summary style="cursor:pointer; font-size:0.85rem; color:#888; margin-bottom:6px">文字起こしテキストを表示</summary>
+      <div class="transcript-box" id="transcript-box"></div>
+    </details>
+
+    <div class="action-row">
+      <button class="btn btn-success" id="btn-create" onclick="createNotion()">Notionページを作成</button>
+      <button class="btn btn-outline" onclick="resetAll()">最初からやり直す</button>
+    </div>
+
+    <div class="status" id="status-notion" style="margin-top:12px">
+      <div class="spinner"></div>
+      <span>Notionページを作成中…</span>
+    </div>
+
+    <div class="notion-result" id="notion-result"></div>
+  </div>
+</div>
+
+<script>
+  const BACKEND_URL = "http://localhost:5000";
+
+  let currentTranscript = "";
+  let currentYoutubeUrl = "";
+
+  function setStatus(id, type, msg) {
+    const el = document.getElementById(id);
+    el.className = "status " + type;
+    if (type === "loading") {
+      el.innerHTML = `<div class="spinner"></div><span>${msg}</span>`;
+    } else {
+      el.innerHTML = `<span>${type === "error" ? "⚠️ " : "✅ "}${msg}</span>`;
+      if (type !== "error") {
+        setTimeout(() => { el.style.display = "none"; }, 4000);
+      }
+    }
+  }
+
+  function hideStatus(id) {
+    document.getElementById(id).style.display = "none";
+  }
+
+  async function processVideo() {
+    const url = document.getElementById("youtube-url").value.trim();
+    if (!url) { alert("YouTubeのURLを入力してください"); return; }
+
+    const btn = document.getElementById("btn-process");
+    btn.disabled = true;
+    setStatus("status-process", "loading", "音声を取得・文字起こし中… (1〜2分かかります)");
+    document.getElementById("preview-section").style.display = "none";
+
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/process`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setStatus("status-process", "error", data.error || "処理に失敗しました");
+        return;
+      }
+
+      currentTranscript = data.transcript;
+      currentYoutubeUrl = url;
+      hideStatus("status-process");
+      renderPreview(data.recipe);
+    } catch (e) {
+      setStatus("status-process", "error", "サーバーに接続できません。バックエンドが起動しているか確認してください。");
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  function renderPreview(recipe) {
+    document.getElementById("recipe-name").value = recipe.recipe_name || "";
+    document.getElementById("recipe-category").value = recipe.category || "";
+    document.getElementById("recipe-memo").value = recipe.memo || "";
+    document.getElementById("transcript-box").textContent = currentTranscript;
+
+    // 材料
+    const tbody = document.getElementById("ingredients-body");
+    tbody.innerHTML = "";
+    (recipe.ingredients || []).forEach(ing => addIngredient(ing.name, ing.amount));
+
+    // 手順
+    const stepsList = document.getElementById("steps-list");
+    stepsList.innerHTML = "";
+    (recipe.steps || []).forEach(step => addStep(step));
+
+    document.getElementById("preview-section").style.display = "block";
+    document.getElementById("notion-result").style.display = "none";
+    document.getElementById("preview-section").scrollIntoView({ behavior: "smooth" });
+  }
+
+  function addIngredient(name = "", amount = "") {
+    const tbody = document.getElementById("ingredients-body");
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td><input type="text" placeholder="鶏もも肉" value="${escHtml(name)}" /></td>
+      <td><input type="text" placeholder="300g" value="${escHtml(amount)}" /></td>
+      <td><button class="btn-remove" onclick="this.closest('tr').remove()" title="削除">×</button></td>
+    `;
+    tbody.appendChild(row);
+  }
+
+  let stepCount = 0;
+  function addStep(text = "") {
+    stepCount++;
+    const list = document.getElementById("steps-list");
+    const li = document.createElement("li");
+    li.className = "step-item";
+    const num = list.querySelectorAll(".step-number").length + 1;
+    li.innerHTML = `
+      <div class="step-number">${num}</div>
+      <textarea placeholder="手順を入力" rows="2">${escHtml(text)}</textarea>
+      <button class="btn-remove" onclick="removeStep(this)" title="削除">×</button>
+    `;
+    list.appendChild(li);
+  }
+
+  function removeStep(btn) {
+    btn.closest("li").remove();
+    // 番号を振り直す
+    document.querySelectorAll(".step-number").forEach((el, i) => {
+      el.textContent = i + 1;
+    });
+  }
+
+  function collectRecipe() {
+    const ingredients = [];
+    document.querySelectorAll("#ingredients-body tr").forEach(row => {
+      const inputs = row.querySelectorAll("input");
+      const name = inputs[0].value.trim();
+      const amount = inputs[1].value.trim();
+      if (name) ingredients.push({ name, amount });
+    });
+
+    const steps = [];
+    document.querySelectorAll("#steps-list textarea").forEach(ta => {
+      const val = ta.value.trim();
+      if (val) steps.push(val);
+    });
+
+    return {
+      recipe_name: document.getElementById("recipe-name").value.trim(),
+      category: document.getElementById("recipe-category").value.trim(),
+      ingredients,
+      steps,
+      memo: document.getElementById("recipe-memo").value.trim(),
+    };
+  }
+
+  async function createNotion() {
+    const recipe = collectRecipe();
+    if (!recipe.recipe_name) { alert("レシピ名を入力してください"); return; }
+
+    const btn = document.getElementById("btn-create");
+    btn.disabled = true;
+    setStatus("status-notion", "loading", "Notionページを作成中…");
+    document.getElementById("notion-result").style.display = "none";
+
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/create-notion`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ recipe, url: currentYoutubeUrl }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setStatus("status-notion", "error", data.error || "Notionページの作成に失敗しました");
+        return;
+      }
+
+      hideStatus("status-notion");
+      const resultEl = document.getElementById("notion-result");
+      resultEl.style.display = "block";
+      resultEl.innerHTML = `✅ Notionページを作成しました！<br><a href="${data.notion_url}" target="_blank" rel="noopener">${data.notion_url}</a>`;
+    } catch (e) {
+      setStatus("status-notion", "error", "サーバーに接続できません。バックエンドが起動しているか確認してください。");
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  function resetAll() {
+    document.getElementById("youtube-url").value = "";
+    document.getElementById("preview-section").style.display = "none";
+    hideStatus("status-process");
+    hideStatus("status-notion");
+    currentTranscript = "";
+    currentYoutubeUrl = "";
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+</script>
+</body>
+</html>

@@ -1,2 +1,12 @@
 node_modules/
 package-lock.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# 環境変数（APIキーを含むため必ず除外）
+backend/.env
