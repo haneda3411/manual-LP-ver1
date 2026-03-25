@@ -22,7 +22,13 @@ anthropic_client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY
 openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 notion_client = NotionClient(auth=os.environ.get("NOTION_TOKEN"))
 
-NOTION_DATABASE_ID = os.environ.get("NOTION_DATABASE_ID")
+NOTION_DB_MAP = {
+    "刺し場調理マニュアル": os.environ.get("NOTION_DB_SASHIBA_CHORI"),
+    "刺し場仕込みマニュアル": os.environ.get("NOTION_DB_SASHIBA_SHIKOMI"),
+    "焼き場調理マニュアル": os.environ.get("NOTION_DB_YAKIBA_CHORI"),
+    "焼き場仕込みマニュアル": os.environ.get("NOTION_DB_YAKIBA_SHIKOMI"),
+    "ドリンク作成マニュアル": os.environ.get("NOTION_DB_DRINK"),
+}
 
 
 def download_audio(youtube_url: str, output_dir: str) -> str:
@@ -104,7 +110,7 @@ def extract_recipe_info(transcript: str) -> dict:
     return json.loads(content)
 
 
-def create_notion_page(recipe: dict, youtube_url: str) -> dict:
+def create_notion_page(recipe: dict, youtube_url: str, database_id: str) -> dict:
     """Notion APIを使ってレシピページを作成する"""
     children = []
 
@@ -183,7 +189,7 @@ def create_notion_page(recipe: dict, youtube_url: str) -> dict:
 
     # ページ作成
     page_data = {
-        "parent": {"database_id": NOTION_DATABASE_ID},
+        "parent": {"database_id": database_id},
         "properties": {
             "Name": {
                 "title": [
@@ -193,12 +199,6 @@ def create_notion_page(recipe: dict, youtube_url: str) -> dict:
         },
         "children": children,
     }
-
-    # カテゴリがある場合はタグとして追加（データベースにMulti-selectプロパティがあれば）
-    if recipe.get("category"):
-        page_data["properties"]["カテゴリ"] = {
-            "multi_select": [{"name": recipe["category"]}]
-        }
 
     response = notion_client.pages.create(**page_data)
     return response
@@ -250,15 +250,17 @@ def create_notion():
     data = request.get_json()
     recipe = data.get("recipe")
     youtube_url = data.get("url", "").strip()
+    category = data.get("category", "").strip()
 
     if not recipe:
         return jsonify({"error": "レシピデータがありません"}), 400
 
-    if not NOTION_DATABASE_ID:
-        return jsonify({"error": "NOTION_DATABASE_IDが設定されていません"}), 500
+    database_id = NOTION_DB_MAP.get(category)
+    if not database_id:
+        return jsonify({"error": f"カテゴリ「{category}」のデータベースIDが設定されていません"}), 500
 
     try:
-        page = create_notion_page(recipe, youtube_url)
+        page = create_notion_page(recipe, youtube_url, database_id)
         page_url = page.get("url", "")
         return jsonify({"notion_url": page_url})
     except Exception as e:

@@ -284,9 +284,20 @@
     <p>YouTube限定公開URLを入力するだけで、NotionレシピページをAIが自動生成します</p>
   </header>
 
-  <!-- Step 1: URL入力 -->
+  <!-- Step 1: カテゴリ選択 + URL入力 -->
   <div class="card">
-    <h2>Step 1 — YouTube URLを入力</h2>
+    <h2>Step 1 — カテゴリを選んでYouTube URLを入力</h2>
+    <div class="recipe-field" style="margin-bottom:14px">
+      <label>マニュアルのカテゴリ</label>
+      <select id="manual-category" style="width:100%;padding:12px 14px;border:1.5px solid #ddd;border-radius:8px;font-size:0.95rem;outline:none;background:#fff;transition:border-color 0.2s;">
+        <option value="">-- カテゴリを選択してください --</option>
+        <option value="刺し場調理マニュアル">刺し場調理マニュアル</option>
+        <option value="刺し場仕込みマニュアル">刺し場仕込みマニュアル</option>
+        <option value="焼き場調理マニュアル">焼き場調理マニュアル</option>
+        <option value="焼き場仕込みマニュアル">焼き場仕込みマニュアル</option>
+        <option value="ドリンク作成マニュアル">ドリンク作成マニュアル</option>
+      </select>
+    </div>
     <div class="input-group">
       <input type="url" id="youtube-url" placeholder="https://www.youtube.com/watch?v=..." />
       <button class="btn btn-primary" id="btn-process" onclick="processVideo()">解析開始</button>
@@ -308,7 +319,7 @@
 
     <div class="recipe-field">
       <label>カテゴリ</label>
-      <input type="text" id="recipe-category" placeholder="例：揚げ物" />
+      <input type="text" id="recipe-category" readonly style="background:#f5f5f0;color:#555;cursor:default;" />
     </div>
 
     <div class="recipe-field">
@@ -361,6 +372,7 @@
 
   let currentTranscript = "";
   let currentYoutubeUrl = "";
+  let currentCategory = "";
 
   function setStatus(id, type, msg) {
     const el = document.getElementById(id);
@@ -380,6 +392,8 @@
   }
 
   async function processVideo() {
+    const category = document.getElementById("manual-category").value;
+    if (!category) { alert("カテゴリを選択してください"); return; }
     const url = document.getElementById("youtube-url").value.trim();
     if (!url) { alert("YouTubeのURLを入力してください"); return; }
 
@@ -403,6 +417,7 @@
 
       currentTranscript = data.transcript;
       currentYoutubeUrl = url;
+      currentCategory = category;
       hideStatus("status-process");
       renderPreview(data.recipe);
     } catch (e) {
@@ -414,7 +429,7 @@
 
   function renderPreview(recipe) {
     document.getElementById("recipe-name").value = recipe.recipe_name || "";
-    document.getElementById("recipe-category").value = recipe.category || "";
+    document.getElementById("recipe-category").value = currentCategory;
     document.getElementById("recipe-memo").value = recipe.memo || "";
     document.getElementById("transcript-box").textContent = currentTranscript;
 
@@ -504,7 +519,7 @@
       const res = await fetch(`${BACKEND_URL}/api/create-notion`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ recipe, url: currentYoutubeUrl }),
+        body: JSON.stringify({ recipe, url: currentYoutubeUrl, category: currentCategory }),
       });
       const data = await res.json();
 
@@ -526,11 +541,13 @@
 
   function resetAll() {
     document.getElementById("youtube-url").value = "";
+    document.getElementById("manual-category").value = "";
     document.getElementById("preview-section").style.display = "none";
     hideStatus("status-process");
     hideStatus("status-notion");
     currentTranscript = "";
     currentYoutubeUrl = "";
+    currentCategory = "";
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
