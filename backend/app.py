@@ -10,7 +10,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
 import anthropic
-from openai import OpenAI
+import google.generativeai as genai
 from notion_client import Client as NotionClient
 
 load_dotenv()
@@ -19,7 +19,7 @@ app = Flask(__name__)
 CORS(app)
 
 anthropic_client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
-openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+genai.configure(api_key=os.environ.get("GOOGLE_API_KEY"))
 notion_client = NotionClient(auth=os.environ.get("NOTION_TOKEN"))
 
 NOTION_DB_MAP = {
@@ -58,13 +58,14 @@ def download_audio(youtube_url: str, output_dir: str) -> str:
 
 
 def transcribe_audio(audio_path: str) -> str:
-    """OpenAI Whisper APIで音声をテキストに変換する"""
-    with open(audio_path, "rb") as f:
-        response = openai_client.audio.transcriptions.create(
-            model="whisper-1",
-            file=f,
-            language="ja",
-        )
+    """Gemini APIで音声をテキストに変換する"""
+    audio_file = genai.upload_file(audio_path)
+    model = genai.GenerativeModel("gemini-2.0-flash")
+    response = model.generate_content([
+        "この音声を日本語でそのまま文字起こししてください。話されている内容を忠実にテキストにしてください。",
+        audio_file,
+    ])
+    genai.delete_file(audio_file.name)
     return response.text
 
 
