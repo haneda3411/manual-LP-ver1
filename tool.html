@@ -313,39 +313,46 @@
     <h2>Step 2 — 内容を確認・修正</h2>
 
     <div class="recipe-field">
-      <label>レシピ名</label>
-      <input type="text" id="recipe-name" placeholder="例：唐揚げの作り方" />
+      <label>メニュー名</label>
+      <input type="text" id="recipe-name" placeholder="例：エリンギにんにくバター焼き" />
     </div>
 
     <div class="recipe-field">
-      <label>カテゴリ</label>
+      <label>カテゴリ（DB）</label>
       <input type="text" id="recipe-category" readonly style="background:#f5f5f0;color:#555;cursor:default;" />
     </div>
 
     <div class="recipe-field">
-      <label>材料・分量</label>
-      <table class="ingredients-table">
-        <thead>
-          <tr>
-            <th style="width:55%">材料名</th>
-            <th style="width:35%">分量</th>
-            <th style="width:10%"></th>
-          </tr>
-        </thead>
-        <tbody id="ingredients-body"></tbody>
-      </table>
-      <button class="btn btn-outline btn-add" onclick="addIngredient()">+ 材料を追加</button>
+      <label>材料</label>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="min-width:70px;font-size:0.85rem;font-weight:600;color:#555;">主要食材</span>
+          <input type="text" id="mat-main" placeholder="例：エリンギ140g／にんにく1ヶ" style="flex:1;padding:8px 10px;border:1.5px solid #e0e0e0;border-radius:6px;font-size:0.92rem;outline:none;" />
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="min-width:70px;font-size:0.85rem;font-weight:600;color:#555;">調味料</span>
+          <input type="text" id="mat-seasoning" placeholder="例：サラダ油・塩・バター" style="flex:1;padding:8px 10px;border:1.5px solid #e0e0e0;border-radius:6px;font-size:0.92rem;outline:none;" />
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="min-width:70px;font-size:0.85rem;font-weight:600;color:#555;">薬味</span>
+          <input type="text" id="mat-garnish" placeholder="例：万能ねぎ" style="flex:1;padding:8px 10px;border:1.5px solid #e0e0e0;border-radius:6px;font-size:0.92rem;outline:none;" />
+        </div>
+      </div>
+      <details style="margin-top:8px;">
+        <summary style="cursor:pointer;font-size:0.85rem;color:#888;">詳細量を表示・編集</summary>
+        <textarea id="mat-details" rows="5" placeholder="例：エリンギ：140g&#10;にんにく：1ヶ" style="width:100%;margin-top:6px;padding:8px 10px;border:1.5px solid #e0e0e0;border-radius:6px;font-size:0.88rem;font-family:inherit;resize:vertical;outline:none;"></textarea>
+      </details>
     </div>
 
     <div class="recipe-field">
-      <label>調理手順</label>
-      <ul class="steps-list" id="steps-list"></ul>
-      <button class="btn btn-outline btn-add" onclick="addStep()">+ 手順を追加</button>
+      <label>手順</label>
+      <div id="steps-list"></div>
+      <button class="btn btn-outline btn-add" onclick="addStep()">+ 工程を追加</button>
     </div>
 
     <div class="recipe-field">
-      <label>メモ・ポイント</label>
-      <textarea id="recipe-memo" rows="3" placeholder="ポイントや注意事項など（任意）"></textarea>
+      <label>動画タイトル</label>
+      <input type="text" id="video-title" placeholder="例：【調理】エリンギニンニクバター焼き" />
     </div>
 
     <details style="margin-bottom:18px">
@@ -430,13 +437,15 @@
   function renderPreview(recipe) {
     document.getElementById("recipe-name").value = recipe.recipe_name || "";
     document.getElementById("recipe-category").value = currentCategory;
-    document.getElementById("recipe-memo").value = recipe.memo || "";
+    document.getElementById("video-title").value = recipe.video_title || "";
     document.getElementById("transcript-box").textContent = currentTranscript;
 
     // 材料
-    const tbody = document.getElementById("ingredients-body");
-    tbody.innerHTML = "";
-    (recipe.ingredients || []).forEach(ing => addIngredient(ing.name, ing.amount));
+    const mat = recipe.materials || {};
+    document.getElementById("mat-main").value = mat.main || "";
+    document.getElementById("mat-seasoning").value = mat.seasoning || "";
+    document.getElementById("mat-garnish").value = mat.garnish || "";
+    document.getElementById("mat-details").value = (mat.details || []).join("\n");
 
     // 手順
     const stepsList = document.getElementById("steps-list");
@@ -448,61 +457,62 @@
     document.getElementById("preview-section").scrollIntoView({ behavior: "smooth" });
   }
 
-  function addIngredient(name = "", amount = "") {
-    const tbody = document.getElementById("ingredients-body");
-    const row = document.createElement("tr");
-    row.innerHTML = `
-      <td><input type="text" placeholder="鶏もも肉" value="${escHtml(name)}" /></td>
-      <td><input type="text" placeholder="300g" value="${escHtml(amount)}" /></td>
-      <td><button class="btn-remove" onclick="this.closest('tr').remove()" title="削除">×</button></td>
-    `;
-    tbody.appendChild(row);
-  }
-
-  let stepCount = 0;
-  function addStep(text = "") {
-    stepCount++;
+  function addStep(stepObj = {}) {
     const list = document.getElementById("steps-list");
-    const li = document.createElement("li");
-    li.className = "step-item";
-    const num = list.querySelectorAll(".step-number").length + 1;
-    li.innerHTML = `
-      <div class="step-number">${num}</div>
-      <textarea placeholder="手順を入力" rows="2">${escHtml(text)}</textarea>
-      <button class="btn-remove" onclick="removeStep(this)" title="削除">×</button>
+    const num = list.querySelectorAll(".step-card").length + 1;
+    const title = typeof stepObj === "string" ? stepObj : (stepObj.title || "");
+    const point = typeof stepObj === "object" ? (stepObj.point || "") : "";
+    const caution = typeof stepObj === "object" ? (stepObj.caution || "") : "";
+    const div = document.createElement("div");
+    div.className = "step-card";
+    div.style.cssText = "border:1.5px solid #e0e0e0;border-radius:8px;padding:12px;margin-bottom:10px;";
+    div.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <span style="background:#4f46e5;color:#fff;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:0.78rem;font-weight:700;flex-shrink:0;" class="step-num">${num}</span>
+        <input type="text" class="step-title" placeholder="工程の説明" value="${escHtml(title)}" style="flex:1;padding:8px 10px;border:1.5px solid #e0e0e0;border-radius:6px;font-size:0.92rem;outline:none;" />
+        <button class="btn-remove" onclick="removeStep(this)" title="削除">×</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;padding-left:32px;">
+        <div style="display:flex;align-items:flex-start;gap:6px;">
+          <span style="font-size:0.8rem;color:#888;padding-top:9px;min-width:60px;">💡ポイント</span>
+          <textarea class="step-point" rows="2" placeholder="ポイント（任意）" style="flex:1;padding:7px 10px;border:1.5px solid #e0e0e0;border-radius:6px;font-size:0.88rem;font-family:inherit;resize:vertical;outline:none;">${escHtml(point)}</textarea>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:6px;">
+          <span style="font-size:0.8rem;color:#888;padding-top:9px;min-width:60px;">⚠️注意点</span>
+          <textarea class="step-caution" rows="2" placeholder="注意点（任意）" style="flex:1;padding:7px 10px;border:1.5px solid #e0e0e0;border-radius:6px;font-size:0.88rem;font-family:inherit;resize:vertical;outline:none;">${escHtml(caution)}</textarea>
+        </div>
+      </div>
     `;
-    list.appendChild(li);
+    list.appendChild(div);
   }
 
   function removeStep(btn) {
-    btn.closest("li").remove();
-    // 番号を振り直す
-    document.querySelectorAll(".step-number").forEach((el, i) => {
-      el.textContent = i + 1;
-    });
+    btn.closest(".step-card").remove();
+    document.querySelectorAll(".step-num").forEach((el, i) => { el.textContent = i + 1; });
   }
 
   function collectRecipe() {
-    const ingredients = [];
-    document.querySelectorAll("#ingredients-body tr").forEach(row => {
-      const inputs = row.querySelectorAll("input");
-      const name = inputs[0].value.trim();
-      const amount = inputs[1].value.trim();
-      if (name) ingredients.push({ name, amount });
+    const steps = [];
+    document.querySelectorAll("#steps-list .step-card").forEach(card => {
+      const title = card.querySelector(".step-title").value.trim();
+      const point = card.querySelector(".step-point").value.trim() || null;
+      const caution = card.querySelector(".step-caution").value.trim() || null;
+      if (title) steps.push({ title, point, caution });
     });
 
-    const steps = [];
-    document.querySelectorAll("#steps-list textarea").forEach(ta => {
-      const val = ta.value.trim();
-      if (val) steps.push(val);
-    });
+    const detailsRaw = document.getElementById("mat-details").value.trim();
+    const details = detailsRaw ? detailsRaw.split("\n").map(s => s.trim()).filter(Boolean) : [];
 
     return {
       recipe_name: document.getElementById("recipe-name").value.trim(),
-      category: document.getElementById("recipe-category").value.trim(),
-      ingredients,
+      materials: {
+        main: document.getElementById("mat-main").value.trim(),
+        seasoning: document.getElementById("mat-seasoning").value.trim(),
+        garnish: document.getElementById("mat-garnish").value.trim(),
+        details,
+      },
       steps,
-      memo: document.getElementById("recipe-memo").value.trim(),
+      video_title: document.getElementById("video-title").value.trim(),
     };
   }
 

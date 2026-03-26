@@ -69,25 +69,33 @@ def transcribe_audio(audio_path: str) -> str:
 
 
 def extract_recipe_info(transcript: str) -> dict:
-    """Claude APIを使って文字起こしテキストからレシピ情報を構造化抽出する"""
-    system_prompt = """あなたは料理レシピ抽出の専門AIです。
-提供された文字起こしテキストから、以下のJSON形式でレシピ情報を抽出してください。
+    """Claude APIを使って文字起こしテキストから構造化マニュアル情報を抽出する"""
+    system_prompt = """あなたは調理マニュアル作成の専門AIです。
+提供された動画の文字起こしテキストから、以下のJSON形式で情報を抽出してください。
 
 {
-  "recipe_name": "レシピ名",
-  "ingredients": [
-    {"name": "材料名", "amount": "分量"}
-  ],
+  "recipe_name": "メニュー名",
+  "materials": {
+    "main": "主要食材の概要（例：エリンギ140g／にんにく1ヶ）",
+    "seasoning": "調味料の概要（例：サラダ油・塩・バター・醤油）",
+    "garnish": "薬味の概要（例：万能ねぎ）。なければ空文字",
+    "details": ["食材名：分量", "食材名：分量（補足）"]
+  },
   "steps": [
-    "手順1",
-    "手順2"
+    {
+      "title": "工程の短い説明（一文、動詞で終わる）",
+      "point": "ポイント・コツのテキスト。なければnull",
+      "caution": "注意点のテキスト。なければnull"
+    }
   ],
-  "memo": "ポイントや注意事項（任意）",
-  "category": "料理ジャンル（例：揚げ物、煮物、炒め物など）"
+  "video_title": "動画タイトル（例：【調理】メニュー名）"
 }
 
-情報が不明な場合は空文字または空配列を使用してください。
-必ずJSON形式のみで返答してください。余分なテキストは含めないでください。"""
+ルール：
+- stepsは工程ごとに分割する（目安3〜8工程）
+- pointとcautionは現場で役立つ具体的な内容のみ。なければnull
+- 情報が不明な場合は空文字またはnullを使用
+- 必ずJSON形式のみで返答。余分なテキスト不可"""
 
     message = anthropic_client.messages.create(
         model="claude-sonnet-4-5",
@@ -95,14 +103,13 @@ def extract_recipe_info(transcript: str) -> dict:
         messages=[
             {
                 "role": "user",
-                "content": f"以下の料理動画の文字起こしテキストからレシピ情報を抽出してください:\n\n{transcript}",
+                "content": f"以下の調理動画の文字起こしテキストからマニュアル情報を抽出してください:\n\n{transcript}",
             }
         ],
         system=system_prompt,
     )
 
     content = message.content[0].text.strip()
-    # JSONブロックがある場合は抽出
     json_match = re.search(r"```(?:json)?\s*([\s\S]*?)```", content)
     if json_match:
         content = json_match.group(1).strip()
@@ -119,101 +126,102 @@ def get_title_property_name(database_id: str) -> str:
     return "名前"
 
 
-def create_notion_page(recipe: dict, youtube_url: str, database_id: str) -> dict:
-    """Notion APIを使ってレシピページを作成する"""
-    children = []
-
-    # 動画リンク
-    children.append({
+def _para(text, bold=False):
+    return {
         "object": "block",
         "type": "paragraph",
         "paragraph": {
-            "rich_text": [
-                {
-                    "type": "text",
-                    "text": {"content": "動画リンク: ", "link": None},
-                    "annotations": {"bold": True},
-                },
-                {
-                    "type": "text",
-                    "text": {"content": youtube_url, "link": {"url": youtube_url}},
-                },
-            ]
+            "rich_text": [{"type": "text", "text": {"content": text}, "annotations": {"bold": bold}}]
         },
-    })
+    }
 
-    # 材料セクション
-    children.append({
+
+def _callout(heading, body, color="yellow_background", icon="💡"):
+    rich = [{"type": "text", "text": {"content": heading}, "annotations": {"bold": True}}]
+    if body:
+        rich.append({"type": "text", "text": {"content": f"\n\n{body}"}})
+    return {
         "object": "block",
-        "type": "heading_2",
-        "heading_2": {
-            "rich_text": [{"type": "text", "text": {"content": "材料・分量"}}]
+        "type": "callout",
+        "callout": {
+            "rich_text": rich,
+            "color": color,
+            "icon": {"type": "emoji", "emoji": icon},
         },
-    })
-    for ingredient in recipe.get("ingredients", []):
-        name = ingredient.get("name", "")
-        amount = ingredient.get("amount", "")
-        text = f"{name}　{amount}".strip()
-        children.append({
-            "object": "block",
-            "type": "bulleted_list_item",
-            "bulleted_list_item": {
-                "rich_text": [{"type": "text", "text": {"content": text}}]
-            },
-        })
+    }
 
-    # 調理手順セクション
-    children.append({
+
+def _bullet(parts):
+    """parts: [(text, bold), ...]"""
+    rich = [{"type": "text", "text": {"content": t}, "annotations": {"bold": b}} for t, b in parts]
+    return {"object": "block", "type": "bulleted_list_item", "bulleted_list_item": {"rich_text": rich}}
+
+
+def _toggle(title, children):
+    return {
         "object": "block",
-        "type": "heading_2",
-        "heading_2": {
-            "rich_text": [{"type": "text", "text": {"content": "調理手順"}}]
+        "type": "toggle",
+        "toggle": {
+            "rich_text": [{"type": "text", "text": {"content": title}}],
+            "children": children,
         },
-    })
-    for step in recipe.get("steps", []):
-        children.append({
-            "object": "block",
-            "type": "numbered_list_item",
-            "numbered_list_item": {
-                "rich_text": [{"type": "text", "text": {"content": step}}]
-            },
-        })
+    }
 
-    # メモセクション
-    if recipe.get("memo"):
-        children.append({
-            "object": "block",
-            "type": "heading_2",
-            "heading_2": {
-                "rich_text": [{"type": "text", "text": {"content": "メモ・ポイント"}}]
-            },
-        })
-        children.append({
-            "object": "block",
-            "type": "paragraph",
-            "paragraph": {
-                "rich_text": [{"type": "text", "text": {"content": recipe["memo"]}}]
-            },
-        })
 
-    # タイトルプロパティ名を自動取得
+def create_notion_page(recipe: dict, youtube_url: str, database_id: str) -> dict:
+    """Notion APIを使って構造化マニュアルページを作成する"""
+    children = []
+    materials = recipe.get("materials", {})
+    steps = recipe.get("steps", [])
+    video_title = recipe.get("video_title") or recipe.get("recipe_name", "")
+
+    # ① 完成盛り付け
+    children.append(_para("[完成盛り付け]", bold=True))
+    children.append(_callout("📷 完成写真", "ここに完成写真を追加してください\n盛り付けポイント：（写真追加後に記入）", color="yellow_background", icon="📷"))
+
+    # ② 材料
+    children.append(_para("[材料]", bold=True))
+    if materials.get("main"):
+        children.append(_bullet([("主要食材", True), ("：" + materials["main"], False)]))
+    if materials.get("seasoning"):
+        children.append(_bullet([("調味料", True), ("：" + materials["seasoning"], False)]))
+    if materials.get("garnish"):
+        children.append(_bullet([("薬味", True), ("：" + materials["garnish"], False)]))
+
+    detail_list = materials.get("details", [])
+    if detail_list:
+        detail_blocks = [
+            {"object": "block", "type": "bulleted_list_item",
+             "bulleted_list_item": {"rich_text": [{"type": "text", "text": {"content": d}}]}}
+            for d in detail_list
+        ]
+        children.append(_toggle("材料（詳細量）", detail_blocks))
+
+    # ③ 手順
+    children.append(_para("[手順]", bold=True))
+    for i, step in enumerate(steps, 1):
+        step_children = []
+        if step.get("caution"):
+            step_children.append(_callout("⚠️ 注意点", step["caution"], color="yellow_background", icon="⚠️"))
+        if step.get("point"):
+            step_children.append(_callout("💡 ポイント", step["point"], color="yellow_background", icon="💡"))
+        step_children.append(_para("（ここに写真を追加）"))
+        children.append(_toggle(f"工程{i}: {step.get('title', '')}", step_children))
+
+    # ④ 動画マニュアルフッター
+    children.append(_para("動画マニュアルはこちら", bold=True))
+    footer_body = f"{video_title}\n▶︎ {youtube_url}"
+    children.append(_callout("▶️", footer_body, color="gray_background", icon="▶️"))
+
     title_prop = get_title_property_name(database_id)
-
-    # ページ作成
     page_data = {
         "parent": {"database_id": database_id},
         "properties": {
-            title_prop: {
-                "title": [
-                    {"text": {"content": recipe.get("recipe_name", "レシピ")}}
-                ]
-            },
+            title_prop: {"title": [{"text": {"content": recipe.get("recipe_name", "マニュアル")}}]},
         },
         "children": children,
     }
-
-    response = notion_client.pages.create(**page_data)
-    return response
+    return notion_client.pages.create(**page_data)
 
 
 @app.route("/api/process", methods=["POST"])
