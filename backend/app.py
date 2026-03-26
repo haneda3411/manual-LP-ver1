@@ -251,8 +251,14 @@ def create_notion_page(recipe: dict, youtube_url: str, database_id: str, image_u
 
     # ④ 動画マニュアルフッター
     children.append(_para("動画マニュアルはこちら", bold=True))
-    footer_body = f"{video_title}\n▶︎ {youtube_url}"
-    children.append(_callout("▶️", footer_body, color="gray_background", icon="▶️"))
+    if video_title:
+        children.append(_para(video_title))
+    if youtube_url:
+        children.append({
+            "object": "block",
+            "type": "video",
+            "video": {"type": "external", "external": {"url": youtube_url}},
+        })
 
     title_prop = get_title_property_name(database_id)
     page_data = {
