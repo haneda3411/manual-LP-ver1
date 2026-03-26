@@ -246,10 +246,10 @@ def create_notion_page(recipe: dict, youtube_url: str, database_id: str, image_u
     if all_points or all_cautions:
         children.append(_para("[ポイント・注意点まとめ]", bold=True))
         if all_points:
-            body = "\n".join([f"• {text}" for text in all_points])
+            body = "\n\n".join([f"• {text}" for text in all_points])
             children.append(_callout("💡 ポイントまとめ", body, color="yellow_background", icon="💡"))
         if all_cautions:
-            body = "\n".join([f"• {text}" for text in all_cautions])
+            body = "\n\n".join([f"• {text}" for text in all_cautions])
             children.append(_callout("⚠️ 注意点まとめ", body, color="yellow_background", icon="⚠️"))
 
     # ③ 材料
