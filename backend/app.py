@@ -9,9 +9,8 @@ from pathlib import Path
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
-import base64
-import requests as http_requests
 import anthropic
+from openai import OpenAI
 from notion_client import Client as NotionClient
 
 load_dotenv()
@@ -20,7 +19,7 @@ app = Flask(__name__)
 CORS(app)
 
 anthropic_client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
-GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
+openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 notion_client = NotionClient(auth=os.environ.get("NOTION_TOKEN"))
 
 NOTION_DB_MAP = {
@@ -59,22 +58,14 @@ def download_audio(youtube_url: str, output_dir: str) -> str:
 
 
 def transcribe_audio(audio_path: str) -> str:
-    """Gemini REST APIで音声をテキストに変換する"""
+    """OpenAI Whisper APIで音声をテキストに変換する"""
     with open(audio_path, "rb") as f:
-        audio_b64 = base64.b64encode(f.read()).decode("utf-8")
-
-    url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={GOOGLE_API_KEY}"
-    payload = {
-        "contents": [{
-            "parts": [
-                {"text": "この音声を日本語でそのまま文字起こししてください。話されている内容を忠実にテキストにしてください。"},
-                {"inline_data": {"mime_type": "audio/mpeg", "data": audio_b64}},
-            ]
-        }]
-    }
-    resp = http_requests.post(url, json=payload, timeout=120)
-    resp.raise_for_status()
-    return resp.json()["candidates"][0]["content"]["parts"][0]["text"]
+        response = openai_client.audio.transcriptions.create(
+            model="whisper-1",
+            file=f,
+            language="ja",
+        )
+    return response.text
 
 
 def extract_recipe_info(transcript: str) -> dict:
