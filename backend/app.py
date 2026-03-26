@@ -120,13 +120,14 @@ def extract_recipe_info(transcript: str) -> dict:
 
 
 def upload_image_to_public(image_bytes: bytes, content_type: str) -> str:
-    """0x0.stに画像をアップロードして公開URLを返す（無料・アカウント不要）"""
+    """catbox.moeに画像をアップロードして公開URLを返す（無料・アカウント不要）"""
     ext = content_type.split("/")[-1].replace("jpeg", "jpg")
     filename = f"manual_{uuid.uuid4().hex[:8]}.{ext}"
 
     response = requests.post(
-        "https://0x0.st",
-        files={"file": (filename, image_bytes, content_type)},
+        "https://catbox.moe/user/api.php",
+        data={"reqtype": "fileupload"},
+        files={"fileToUpload": (filename, image_bytes, content_type)},
         timeout=30,
     )
 
