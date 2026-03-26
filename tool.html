@@ -493,11 +493,21 @@
       <div style="display:flex;flex-direction:column;gap:6px;padding-left:32px;">
         <div style="display:flex;align-items:flex-start;gap:6px;">
           <span style="font-size:0.8rem;color:#888;padding-top:9px;min-width:60px;">💡ポイント</span>
-          <textarea class="step-point" rows="2" placeholder="ポイント（任意）" style="flex:1;padding:7px 10px;border:1.5px solid #e0e0e0;border-radius:6px;font-size:0.88rem;font-family:inherit;resize:vertical;outline:none;">${escHtml(point)}</textarea>
+          <div style="flex:1;display:flex;flex-direction:column;gap:4px;">
+            <textarea class="step-point" rows="2" placeholder="ポイント（任意）" style="width:100%;padding:7px 10px;border:1.5px solid #e0e0e0;border-radius:6px;font-size:0.88rem;font-family:inherit;resize:vertical;outline:none;">${escHtml(point)}</textarea>
+            <label style="font-size:0.78rem;color:#4f46e5;display:flex;align-items:center;gap:4px;cursor:pointer;">
+              <input type="checkbox" class="step-point-include" ${point ? "checked" : ""} style="accent-color:#4f46e5;"> まとめに含める
+            </label>
+          </div>
         </div>
         <div style="display:flex;align-items:flex-start;gap:6px;">
           <span style="font-size:0.8rem;color:#888;padding-top:9px;min-width:60px;">⚠️注意点</span>
-          <textarea class="step-caution" rows="2" placeholder="注意点（任意）" style="flex:1;padding:7px 10px;border:1.5px solid #e0e0e0;border-radius:6px;font-size:0.88rem;font-family:inherit;resize:vertical;outline:none;">${escHtml(caution)}</textarea>
+          <div style="flex:1;display:flex;flex-direction:column;gap:4px;">
+            <textarea class="step-caution" rows="2" placeholder="注意点（任意）" style="width:100%;padding:7px 10px;border:1.5px solid #e0e0e0;border-radius:6px;font-size:0.88rem;font-family:inherit;resize:vertical;outline:none;">${escHtml(caution)}</textarea>
+            <label style="font-size:0.78rem;color:#4f46e5;display:flex;align-items:center;gap:4px;cursor:pointer;">
+              <input type="checkbox" class="step-caution-include" ${caution ? "checked" : ""} style="accent-color:#4f46e5;"> まとめに含める
+            </label>
+          </div>
         </div>
       </div>
     `;
@@ -515,7 +525,9 @@
       const title = card.querySelector(".step-title").value.trim();
       const point = card.querySelector(".step-point").value.trim() || null;
       const caution = card.querySelector(".step-caution").value.trim() || null;
-      if (title) steps.push({ title, point, caution });
+      const pointInclude = card.querySelector(".step-point-include").checked;
+      const cautionInclude = card.querySelector(".step-caution-include").checked;
+      if (title) steps.push({ title, point, caution, point_in_summary: !!(point && pointInclude), caution_in_summary: !!(caution && cautionInclude) });
     });
 
     const detailsRaw = document.getElementById("mat-details").value.trim();

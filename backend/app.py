@@ -240,9 +240,9 @@ def create_notion_page(recipe: dict, youtube_url: str, database_id: str, image_u
     else:
         children.append(_callout("📷 完成写真", "ここに完成写真を追加してください\n盛り付けポイント：（写真追加後に記入）", color="yellow_background", icon="📷"))
 
-    # ② ポイント・注意点まとめ
-    all_points   = [(f"工程{i+1}", s["point"])   for i, s in enumerate(steps) if s.get("point")]
-    all_cautions = [(f"工程{i+1}", s["caution"]) for i, s in enumerate(steps) if s.get("caution")]
+    # ② ポイント・注意点まとめ（まとめに含める選択がある場合はそちらを優先）
+    all_points   = [(f"工程{i+1}", s["point"])   for i, s in enumerate(steps) if s.get("point")   and s.get("point_in_summary", True)]
+    all_cautions = [(f"工程{i+1}", s["caution"]) for i, s in enumerate(steps) if s.get("caution") and s.get("caution_in_summary", True)]
     if all_points or all_cautions:
         children.append(_para("[ポイント・注意点まとめ]", bold=True))
         if all_points:
