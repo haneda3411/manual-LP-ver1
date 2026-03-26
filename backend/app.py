@@ -20,7 +20,10 @@ app = Flask(__name__)
 CORS(app)
 
 anthropic_client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
-gemini_client = google_genai.Client(api_key=os.environ.get("GOOGLE_API_KEY"))
+gemini_client = google_genai.Client(
+    api_key=os.environ.get("GOOGLE_API_KEY"),
+    http_options={"api_version": "v1"},
+)
 notion_client = NotionClient(auth=os.environ.get("NOTION_TOKEN"))
 
 NOTION_DB_MAP = {
