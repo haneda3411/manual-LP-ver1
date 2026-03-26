@@ -33,41 +33,114 @@ NOTION_DB_MAP = {
 }
 
 
-def download_audio(youtube_url: str, output_dir: str) -> str:
-    """yt-dlpを使ってYouTube動画の音声をmp3でダウンロードする"""
-    output_path = os.path.join(output_dir, "audio.%(ext)s")
+def download_video(youtube_url: str, output_dir: str) -> str:
+    """yt-dlpでYouTube動画をダウンロードする（720p以下）"""
+    output_path = os.path.join(output_dir, "video.%(ext)s")
     cmd = [
         "yt-dlp",
-        "--extract-audio",
-        "--audio-format", "mp3",
-        "--audio-quality", "0",
+        "--format", "bestvideo[height<=720]+bestaudio/best[height<=720]",
+        "--merge-output-format", "mp4",
         "--output", output_path,
         "--no-playlist",
         youtube_url,
     ]
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
     if result.returncode != 0:
         raise RuntimeError(f"yt-dlp error: {result.stderr}")
-
-    mp3_file = os.path.join(output_dir, "audio.mp3")
-    if not os.path.exists(mp3_file):
-        # 拡張子が変わる場合を探す
-        files = list(Path(output_dir).glob("audio.*"))
-        if not files:
-            raise RuntimeError("音声ファイルの取得に失敗しました")
-        mp3_file = str(files[0])
-    return mp3_file
+    files = list(Path(output_dir).glob("video.*"))
+    if not files:
+        raise RuntimeError("動画ファイルの取得に失敗しました")
+    return str(files[0])
 
 
-def transcribe_audio(audio_path: str) -> str:
-    """OpenAI Whisper APIで音声をテキストに変換する"""
+def extract_audio_from_video(video_path: str, output_dir: str) -> str:
+    """ffmpegで動画から音声をmp3として抽出する"""
+    audio_path = os.path.join(output_dir, "audio.mp3")
+    cmd = ["ffmpeg", "-i", video_path, "-vn", "-acodec", "libmp3lame", "-q:a", "4", "-y", audio_path]
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+    if result.returncode != 0:
+        raise RuntimeError(f"音声抽出エラー: {result.stderr}")
+    return audio_path
+
+
+def transcribe_audio_with_timestamps(audio_path: str) -> tuple:
+    """OpenAI Whisper APIで音声をテキスト+セグメントタイムスタンプに変換する"""
     with open(audio_path, "rb") as f:
         response = openai_client.audio.transcriptions.create(
             model="whisper-1",
             file=f,
             language="ja",
+            response_format="verbose_json",
+            timestamp_granularities=["segment"],
         )
-    return response.text
+    transcript = response.text
+    segments = [{"start": float(s.start), "end": float(s.end), "text": s.text}
+                for s in (response.segments or [])]
+    return transcript, segments
+
+
+def map_steps_to_timestamps(steps: list, segments: list) -> list:
+    """Claudeを使って各工程のタイムスタンプ範囲を特定する"""
+    if not segments:
+        return [{"step": i + 1, "start": None, "end": None} for i in range(len(steps))]
+
+    segments_text = "\n".join([f"[{s['start']:.1f}s-{s['end']:.1f}s]: {s['text']}" for s in segments])
+    steps_text = "\n".join([f"{i+1}. {s['title']}" for i, s in enumerate(steps)])
+
+    prompt = f"""調理動画の文字起こしセグメント（タイムスタンプ付き）と工程リストを照合し、
+各工程が動画の何秒〜何秒に対応するかをJSON配列で返してください。
+
+工程リスト:
+{steps_text}
+
+文字起こしセグメント:
+{segments_text}
+
+JSON形式のみで返答（対応不明な場合はnull）:
+[{{"step": 1, "start": 10.5, "end": 45.2}}, ...]"""
+
+    message = anthropic_client.messages.create(
+        model="claude-sonnet-4-5",
+        max_tokens=512,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    content = message.content[0].text.strip()
+    json_match = re.search(r"```(?:json)?\s*([\s\S]*?)```", content)
+    if json_match:
+        content = json_match.group(1).strip()
+    return json.loads(content)
+
+
+def extract_and_upload_frames(video_path: str, step_timestamps: list, output_dir: str) -> list:
+    """各工程から3フレームを抽出してcatbox.moeにアップロードする"""
+    results = []
+    for item in step_timestamps:
+        step_num = item.get("step", 0)
+        start = item.get("start")
+        end = item.get("end")
+
+        if start is None or end is None or end <= start:
+            results.append({"step": step_num, "frame_urls": []})
+            continue
+
+        duration = end - start
+        urls = []
+        for j, ratio in enumerate([0.2, 0.5, 0.8]):
+            ts = start + duration * ratio
+            frame_path = os.path.join(output_dir, f"step{step_num}_frame{j}.jpg")
+            cmd = ["ffmpeg", "-ss", f"{ts:.2f}", "-i", video_path,
+                   "-frames:v", "1", "-q:v", "3", "-y", frame_path]
+            r = subprocess.run(cmd, capture_output=True, timeout=30)
+            if r.returncode == 0 and os.path.exists(frame_path):
+                try:
+                    with open(frame_path, "rb") as f:
+                        url = upload_image_to_public(f.read(), "image/jpeg")
+                    urls.append(url)
+                except Exception:
+                    pass
+
+        results.append({"step": step_num, "frame_urls": urls})
+    return results
 
 
 def extract_recipe_info(transcript: str) -> dict:
@@ -278,7 +351,10 @@ def create_notion_page(recipe: dict, youtube_url: str, database_id: str, image_u
             step_children.append(_callout("⚠️ 注意点", step["caution"], color="yellow_background", icon="⚠️"))
         if step.get("point"):
             step_children.append(_callout("💡 ポイント", step["point"], color="yellow_background", icon="💡"))
-        step_children.append(_para("（ここに写真を追加）"))
+        if step.get("selected_frame_url"):
+            step_children.append(_image(step["selected_frame_url"]))
+        else:
+            step_children.append(_para("（ここに写真を追加）"))
         children.append(_toggle(f"工程{i}: {step.get('title', '')}", step_children))
 
     # ④ 動画マニュアルフッター
@@ -308,37 +384,49 @@ def create_notion_page(recipe: dict, youtube_url: str, database_id: str, image_u
 
 @app.route("/api/process", methods=["POST"])
 def process_video():
-    """YouTube URLから音声取得→文字起こし→レシピ抽出を行う"""
+    """YouTube URLから動画取得→文字起こし→レシピ抽出→フレーム候補を行う"""
     data = request.get_json()
     youtube_url = data.get("url", "").strip()
 
     if not youtube_url:
         return jsonify({"error": "URLが入力されていません"}), 400
 
-    # 簡易URL検証
     if "youtube.com" not in youtube_url and "youtu.be" not in youtube_url:
         return jsonify({"error": "有効なYouTube URLを入力してください"}), 400
 
     with tempfile.TemporaryDirectory() as tmpdir:
         try:
-            # Step 1: 音声ダウンロード
-            audio_path = download_audio(youtube_url, tmpdir)
+            video_path = download_video(youtube_url, tmpdir)
         except Exception as e:
-            return jsonify({"error": f"音声取得エラー: {str(e)}"}), 500
+            return jsonify({"error": f"動画取得エラー: {str(e)}"}), 500
 
         try:
-            # Step 2: 文字起こし
-            transcript = transcribe_audio(audio_path)
+            audio_path = extract_audio_from_video(video_path, tmpdir)
+        except Exception as e:
+            return jsonify({"error": f"音声抽出エラー: {str(e)}"}), 500
+
+        try:
+            transcript, segments = transcribe_audio_with_timestamps(audio_path)
         except Exception as e:
             return jsonify({"error": f"文字起こしエラー: {str(e)}"}), 500
 
-    try:
-        # Step 3: レシピ抽出
-        recipe = extract_recipe_info(transcript)
-    except json.JSONDecodeError as e:
-        return jsonify({"error": f"レシピ抽出エラー（JSON解析失敗）: {str(e)}"}), 500
-    except Exception as e:
-        return jsonify({"error": f"レシピ抽出エラー: {str(e)}"}), 500
+        try:
+            recipe = extract_recipe_info(transcript)
+        except json.JSONDecodeError as e:
+            return jsonify({"error": f"レシピ抽出エラー（JSON解析失敗）: {str(e)}"}), 500
+        except Exception as e:
+            return jsonify({"error": f"レシピ抽出エラー: {str(e)}"}), 500
+
+        # フレーム候補抽出（失敗しても処理継続）
+        try:
+            step_timestamps = map_steps_to_timestamps(recipe.get("steps", []), segments)
+            frame_results = extract_and_upload_frames(video_path, step_timestamps, tmpdir)
+            frame_map = {f["step"]: f["frame_urls"] for f in frame_results}
+            for i, step in enumerate(recipe.get("steps", []), 1):
+                step["frame_candidates"] = frame_map.get(i, [])
+        except Exception:
+            for step in recipe.get("steps", []):
+                step.setdefault("frame_candidates", [])
 
     return jsonify({
         "transcript": transcript,
