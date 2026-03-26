@@ -60,7 +60,7 @@ def download_audio(youtube_url: str, output_dir: str) -> str:
 def transcribe_audio(audio_path: str) -> str:
     """Gemini APIで音声をテキストに変換する"""
     audio_file = genai.upload_file(audio_path)
-    model = genai.GenerativeModel("gemini-2.0-flash")
+    model = genai.GenerativeModel("gemini-1.5-flash")
     response = model.generate_content([
         "この音声を日本語でそのまま文字起こししてください。話されている内容を忠実にテキストにしてください。",
         audio_file,
