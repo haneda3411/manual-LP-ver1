@@ -181,6 +181,33 @@ def _callout(heading, body, color="yellow_background", icon="💡"):
     }
 
 
+def _callout_with_bullets(heading, items, color="yellow_background", icon="💡"):
+    """items: [(label, text), ...] として箇条書きをcallout内に表示"""
+    bullet_children = [
+        {
+            "object": "block",
+            "type": "bulleted_list_item",
+            "bulleted_list_item": {
+                "rich_text": [
+                    {"type": "text", "text": {"content": label}, "annotations": {"bold": True}},
+                    {"type": "text", "text": {"content": f"：{text}"}},
+                ]
+            },
+        }
+        for label, text in items
+    ]
+    return {
+        "object": "block",
+        "type": "callout",
+        "callout": {
+            "rich_text": [{"type": "text", "text": {"content": heading}, "annotations": {"bold": True}}],
+            "color": color,
+            "icon": {"type": "emoji", "emoji": icon},
+            "children": bullet_children,
+        },
+    }
+
+
 def _bullet(parts):
     """parts: [(text, bold), ...]"""
     rich = [{"type": "text", "text": {"content": t}, "annotations": {"bold": b}} for t, b in parts]
@@ -220,7 +247,17 @@ def create_notion_page(recipe: dict, youtube_url: str, database_id: str, image_u
     else:
         children.append(_callout("📷 完成写真", "ここに完成写真を追加してください\n盛り付けポイント：（写真追加後に記入）", color="yellow_background", icon="📷"))
 
-    # ② 材料
+    # ② ポイント・注意点まとめ
+    all_points   = [(f"工程{i+1}", s["point"])   for i, s in enumerate(steps) if s.get("point")]
+    all_cautions = [(f"工程{i+1}", s["caution"]) for i, s in enumerate(steps) if s.get("caution")]
+    if all_points or all_cautions:
+        children.append(_para("[ポイント・注意点まとめ]", bold=True))
+        if all_points:
+            children.append(_callout_with_bullets("💡 ポイントまとめ", all_points, color="yellow_background", icon="💡"))
+        if all_cautions:
+            children.append(_callout_with_bullets("⚠️ 注意点まとめ", all_cautions, color="yellow_background", icon="⚠️"))
+
+    # ③ 材料
     children.append(_para("[材料]", bold=True))
     if materials.get("main"):
         children.append(_bullet([("主要食材", True), ("：" + materials["main"], False)]))
