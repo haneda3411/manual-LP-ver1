@@ -4,8 +4,10 @@ import re
 import subprocess
 import tempfile
 import uuid
+import base64
 from pathlib import Path
 
+import requests
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
@@ -117,6 +119,34 @@ def extract_recipe_info(transcript: str) -> dict:
     return json.loads(content)
 
 
+def upload_image_to_notion(image_bytes: bytes, content_type: str) -> str:
+    """Notionのファイルストレージに画像をアップロードしてURLを返す"""
+    token = os.environ.get("NOTION_TOKEN")
+    ext = content_type.split("/")[-1].replace("jpeg", "jpg")
+    filename = f"completion_{uuid.uuid4().hex[:8]}.{ext}"
+
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Notion-Version": "2022-06-28",
+    }
+
+    response = requests.post(
+        "https://api.notion.com/v1/files",
+        headers=headers,
+        files={"file": (filename, image_bytes, content_type)},
+        timeout=60,
+    )
+
+    if not response.ok:
+        raise RuntimeError(f"画像アップロードエラー ({response.status_code}): {response.text}")
+
+    data = response.json()
+    url = data.get("url") or data.get("file", {}).get("url", "")
+    if not url:
+        raise RuntimeError(f"Notionから画像URLを取得できませんでした: {data}")
+    return url
+
+
 def get_title_property_name(database_id: str) -> str:
     """データベースのタイトルプロパティ名を自動取得する"""
     db = notion_client.databases.retrieve(database_id=database_id)
@@ -157,6 +187,14 @@ def _bullet(parts):
     return {"object": "block", "type": "bulleted_list_item", "bulleted_list_item": {"rich_text": rich}}
 
 
+def _image(url):
+    return {
+        "object": "block",
+        "type": "image",
+        "image": {"type": "external", "external": {"url": url}},
+    }
+
+
 def _toggle(title, children):
     return {
         "object": "block",
@@ -168,7 +206,7 @@ def _toggle(title, children):
     }
 
 
-def create_notion_page(recipe: dict, youtube_url: str, database_id: str) -> dict:
+def create_notion_page(recipe: dict, youtube_url: str, database_id: str, image_url: str = None) -> dict:
     """Notion APIを使って構造化マニュアルページを作成する"""
     children = []
     materials = recipe.get("materials", {})
@@ -177,7 +215,10 @@ def create_notion_page(recipe: dict, youtube_url: str, database_id: str) -> dict
 
     # ① 完成盛り付け
     children.append(_para("[完成盛り付け]", bold=True))
-    children.append(_callout("📷 完成写真", "ここに完成写真を追加してください\n盛り付けポイント：（写真追加後に記入）", color="yellow_background", icon="📷"))
+    if image_url:
+        children.append(_image(image_url))
+    else:
+        children.append(_callout("📷 完成写真", "ここに完成写真を追加してください\n盛り付けポイント：（写真追加後に記入）", color="yellow_background", icon="📷"))
 
     # ② 材料
     children.append(_para("[材料]", bold=True))
@@ -271,6 +312,8 @@ def create_notion():
     recipe = data.get("recipe")
     youtube_url = data.get("url", "").strip()
     category = data.get("category", "").strip()
+    image_b64 = data.get("image")       # base64文字列（任意）
+    image_type = data.get("image_type") # MIMEタイプ（例: image/jpeg）
 
     if not recipe:
         return jsonify({"error": "レシピデータがありません"}), 400
@@ -279,8 +322,17 @@ def create_notion():
     if not database_id:
         return jsonify({"error": f"カテゴリ「{category}」のデータベースIDが設定されていません"}), 500
 
+    # 画像アップロード（あれば）
+    image_url = None
+    if image_b64 and image_type:
+        try:
+            image_bytes = base64.b64decode(image_b64)
+            image_url = upload_image_to_notion(image_bytes, image_type)
+        except Exception as e:
+            return jsonify({"error": f"画像アップロードエラー: {str(e)}"}), 500
+
     try:
-        page = create_notion_page(recipe, youtube_url, database_id)
+        page = create_notion_page(recipe, youtube_url, database_id, image_url=image_url)
         page_url = page.get("url", "")
         return jsonify({"notion_url": page_url})
     except Exception as e:

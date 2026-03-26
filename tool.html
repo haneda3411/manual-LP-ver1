@@ -313,6 +313,22 @@
     <h2>Step 2 — 内容を確認・修正</h2>
 
     <div class="recipe-field">
+      <label>完成盛り付け画像（任意）</label>
+      <div id="image-upload-area" onclick="document.getElementById('image-file-input').click()"
+        style="border:2px dashed #d0d0d0;border-radius:10px;padding:20px;text-align:center;cursor:pointer;background:#fafafa;transition:border-color 0.2s;position:relative;"
+        ondragover="event.preventDefault();this.style.borderColor='#4f46e5';"
+        ondragleave="this.style.borderColor='#d0d0d0';"
+        ondrop="handleImageDrop(event)">
+        <div id="image-placeholder" style="color:#999;font-size:0.9rem;">
+          📷 クリックまたはドラッグ＆ドロップで画像を選択
+        </div>
+        <img id="image-preview" style="display:none;max-width:100%;max-height:240px;border-radius:6px;margin-top:4px;" />
+        <button id="image-clear-btn" onclick="clearImage(event)" style="display:none;position:absolute;top:8px;right:8px;background:#ef4444;color:#fff;border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:0.9rem;line-height:1;">×</button>
+      </div>
+      <input type="file" id="image-file-input" accept="image/*" style="display:none;" onchange="handleImageSelect(event)" />
+    </div>
+
+    <div class="recipe-field">
       <label>メニュー名</label>
       <input type="text" id="recipe-name" placeholder="例：エリンギにんにくバター焼き" />
     </div>
@@ -380,6 +396,8 @@
   let currentTranscript = "";
   let currentYoutubeUrl = "";
   let currentCategory = "";
+  let currentImageData = null;
+  let currentImageType = null;
 
   function setStatus(id, type, msg) {
     const el = document.getElementById(id);
@@ -529,7 +547,7 @@
       const res = await fetch(`${BACKEND_URL}/api/create-notion`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ recipe, url: currentYoutubeUrl, category: currentCategory }),
+        body: JSON.stringify({ recipe, url: currentYoutubeUrl, category: currentCategory, image: currentImageData, image_type: currentImageType }),
       });
       const data = await res.json();
 
@@ -558,7 +576,46 @@
     currentTranscript = "";
     currentYoutubeUrl = "";
     currentCategory = "";
+    clearImage();
     window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function handleImageSelect(event) {
+    const file = event.target.files[0];
+    if (file) loadImageFile(file);
+  }
+
+  function handleImageDrop(event) {
+    event.preventDefault();
+    document.getElementById("image-upload-area").style.borderColor = "#d0d0d0";
+    const file = event.dataTransfer.files[0];
+    if (file && file.type.startsWith("image/")) loadImageFile(file);
+  }
+
+  function loadImageFile(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target.result;
+      // dataUrl形式: "data:image/jpeg;base64,..."
+      currentImageType = file.type;
+      currentImageData = dataUrl.split(",")[1]; // base64部分のみ
+      document.getElementById("image-preview").src = dataUrl;
+      document.getElementById("image-preview").style.display = "block";
+      document.getElementById("image-placeholder").style.display = "none";
+      document.getElementById("image-clear-btn").style.display = "block";
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function clearImage(event) {
+    if (event) event.stopPropagation();
+    currentImageData = null;
+    currentImageType = null;
+    document.getElementById("image-file-input").value = "";
+    document.getElementById("image-preview").src = "";
+    document.getElementById("image-preview").style.display = "none";
+    document.getElementById("image-placeholder").style.display = "block";
+    document.getElementById("image-clear-btn").style.display = "none";
   }
 
   function escHtml(str) {
