@@ -110,6 +110,15 @@ def extract_recipe_info(transcript: str) -> dict:
     return json.loads(content)
 
 
+def get_title_property_name(database_id: str) -> str:
+    """データベースのタイトルプロパティ名を自動取得する"""
+    db = notion_client.databases.retrieve(database_id=database_id)
+    for prop_name, prop_data in db["properties"].items():
+        if prop_data["type"] == "title":
+            return prop_name
+    return "名前"
+
+
 def create_notion_page(recipe: dict, youtube_url: str, database_id: str) -> dict:
     """Notion APIを使ってレシピページを作成する"""
     children = []
@@ -187,11 +196,14 @@ def create_notion_page(recipe: dict, youtube_url: str, database_id: str) -> dict
             },
         })
 
+    # タイトルプロパティ名を自動取得
+    title_prop = get_title_property_name(database_id)
+
     # ページ作成
     page_data = {
         "parent": {"database_id": database_id},
         "properties": {
-            "名前": {
+            title_prop: {
                 "title": [
                     {"text": {"content": recipe.get("recipe_name", "レシピ")}}
                 ]
