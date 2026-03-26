@@ -203,8 +203,8 @@ def _callout_with_bullets(heading, items, color="yellow_background", icon="💡"
             "rich_text": [{"type": "text", "text": {"content": heading}, "annotations": {"bold": True}}],
             "color": color,
             "icon": {"type": "emoji", "emoji": icon},
-            "children": bullet_children,
         },
+        "children": bullet_children,
     }
 
 
