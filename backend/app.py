@@ -9,9 +9,9 @@ from pathlib import Path
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
+import base64
+import requests as http_requests
 import anthropic
-from google import genai as google_genai
-from google.genai import types as genai_types
 from notion_client import Client as NotionClient
 
 load_dotenv()
@@ -20,10 +20,7 @@ app = Flask(__name__)
 CORS(app)
 
 anthropic_client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
-gemini_client = google_genai.Client(
-    api_key=os.environ.get("GOOGLE_API_KEY"),
-    http_options={"api_version": "v1"},
-)
+GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
 notion_client = NotionClient(auth=os.environ.get("NOTION_TOKEN"))
 
 NOTION_DB_MAP = {
@@ -62,17 +59,22 @@ def download_audio(youtube_url: str, output_dir: str) -> str:
 
 
 def transcribe_audio(audio_path: str) -> str:
-    """Gemini APIで音声をテキストに変換する"""
+    """Gemini REST APIで音声をテキストに変換する"""
     with open(audio_path, "rb") as f:
-        audio_data = f.read()
-    response = gemini_client.models.generate_content(
-        model="gemini-1.5-flash",
-        contents=[
-            genai_types.Part(text="この音声を日本語でそのまま文字起こししてください。話されている内容を忠実にテキストにしてください。"),
-            genai_types.Part(inline_data=genai_types.Blob(data=audio_data, mime_type="audio/mpeg")),
-        ],
-    )
-    return response.text
+        audio_b64 = base64.b64encode(f.read()).decode("utf-8")
+
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GOOGLE_API_KEY}"
+    payload = {
+        "contents": [{
+            "parts": [
+                {"text": "この音声を日本語でそのまま文字起こししてください。話されている内容を忠実にテキストにしてください。"},
+                {"inline_data": {"mime_type": "audio/mpeg", "data": audio_b64}},
+            ]
+        }]
+    }
+    resp = http_requests.post(url, json=payload, timeout=120)
+    resp.raise_for_status()
+    return resp.json()["candidates"][0]["content"]["parts"][0]["text"]
 
 
 def extract_recipe_info(transcript: str) -> dict:
