@@ -191,7 +191,7 @@ def create_notion_page(recipe: dict, youtube_url: str, database_id: str) -> dict
     page_data = {
         "parent": {"database_id": database_id},
         "properties": {
-            "Name": {
+            "名前": {
                 "title": [
                     {"text": {"content": recipe.get("recipe_name", "レシピ")}}
                 ]
