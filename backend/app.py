@@ -119,31 +119,23 @@ def extract_recipe_info(transcript: str) -> dict:
     return json.loads(content)
 
 
-def upload_image_to_notion(image_bytes: bytes, content_type: str) -> str:
-    """Notionのファイルストレージに画像をアップロードしてURLを返す"""
-    token = os.environ.get("NOTION_TOKEN")
+def upload_image_to_public(image_bytes: bytes, content_type: str) -> str:
+    """0x0.stに画像をアップロードして公開URLを返す（無料・アカウント不要）"""
     ext = content_type.split("/")[-1].replace("jpeg", "jpg")
-    filename = f"completion_{uuid.uuid4().hex[:8]}.{ext}"
-
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Notion-Version": "2022-06-28",
-    }
+    filename = f"manual_{uuid.uuid4().hex[:8]}.{ext}"
 
     response = requests.post(
-        "https://api.notion.com/v1/files",
-        headers=headers,
+        "https://0x0.st",
         files={"file": (filename, image_bytes, content_type)},
-        timeout=60,
+        timeout=30,
     )
 
     if not response.ok:
         raise RuntimeError(f"画像アップロードエラー ({response.status_code}): {response.text}")
 
-    data = response.json()
-    url = data.get("url") or data.get("file", {}).get("url", "")
-    if not url:
-        raise RuntimeError(f"Notionから画像URLを取得できませんでした: {data}")
+    url = response.text.strip()
+    if not url.startswith("http"):
+        raise RuntimeError(f"画像URLの取得に失敗しました: {url}")
     return url
 
 
@@ -370,7 +362,7 @@ def create_notion():
     if image_b64 and image_type:
         try:
             image_bytes = base64.b64decode(image_b64)
-            image_url = upload_image_to_notion(image_bytes, image_type)
+            image_url = upload_image_to_public(image_bytes, image_type)
         except Exception as e:
             return jsonify({"error": f"画像アップロードエラー: {str(e)}"}), 500
 
