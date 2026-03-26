@@ -11,6 +11,7 @@ from flask_cors import CORS
 from dotenv import load_dotenv
 import anthropic
 from google import genai as google_genai
+from google.genai import types as genai_types
 from notion_client import Client as NotionClient
 
 load_dotenv()
@@ -59,15 +60,15 @@ def download_audio(youtube_url: str, output_dir: str) -> str:
 
 def transcribe_audio(audio_path: str) -> str:
     """Gemini APIで音声をテキストに変換する"""
-    audio_file = gemini_client.files.upload(file=audio_path)
+    with open(audio_path, "rb") as f:
+        audio_data = f.read()
     response = gemini_client.models.generate_content(
         model="gemini-1.5-flash",
         contents=[
-            "この音声を日本語でそのまま文字起こししてください。話されている内容を忠実にテキストにしてください。",
-            audio_file,
+            genai_types.Part(text="この音声を日本語でそのまま文字起こししてください。話されている内容を忠実にテキストにしてください。"),
+            genai_types.Part(inline_data=genai_types.Blob(data=audio_data, mime_type="audio/mpeg")),
         ],
     )
-    gemini_client.files.delete(name=audio_file.name)
     return response.text
 
 
