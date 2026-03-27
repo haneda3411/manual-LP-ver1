@@ -424,7 +424,7 @@
 
     const btn = document.getElementById("btn-process");
     btn.disabled = true;
-    setStatus("status-process", "loading", "音声を取得・文字起こし中… (1〜2分かかります)");
+    setStatus("status-process", "loading", "動画を取得・解析中… (3〜5分かかる場合があります)");
     document.getElementById("preview-section").style.display = "none";
 
     try {
@@ -481,6 +481,7 @@
     const title = typeof stepObj === "string" ? stepObj : (stepObj.title || "");
     const point = typeof stepObj === "object" ? (stepObj.point || "") : "";
     const caution = typeof stepObj === "object" ? (stepObj.caution || "") : "";
+    const frames = (typeof stepObj === "object" && Array.isArray(stepObj.frame_candidates)) ? stepObj.frame_candidates : [];
     const div = document.createElement("div");
     div.className = "step-card";
     div.style.cssText = "border:1.5px solid #e0e0e0;border-radius:8px;padding:12px;margin-bottom:10px;";
@@ -509,6 +510,17 @@
             </label>
           </div>
         </div>
+        ${frames.length > 0 ? `
+        <div style="margin-top:10px;padding-top:10px;border-top:1px solid #eee;">
+          <div style="font-size:0.78rem;color:#888;margin-bottom:6px;">📷 フレーム候補 — 使うものをクリック（もう一度クリックで解除）</div>
+          <div style="display:flex;gap:6px;">
+            ${frames.map((url, idx) => `
+              <img src="${url}" class="frame-candidate" data-url="${url}" data-selected="false"
+                style="flex:1;aspect-ratio:16/9;object-fit:cover;border-radius:6px;cursor:pointer;border:3px solid transparent;transition:border-color 0.15s;"
+                onclick="selectFrame(this)" />
+            `).join('')}
+          </div>
+        </div>` : ''}
       </div>
     `;
     list.appendChild(div);
@@ -519,6 +531,21 @@
     document.querySelectorAll(".step-num").forEach((el, i) => { el.textContent = i + 1; });
   }
 
+  function selectFrame(img) {
+    const card = img.closest(".step-card");
+    const isSelected = img.dataset.selected === "true";
+    // 同カード内の全フレームを一旦解除
+    card.querySelectorAll(".frame-candidate").forEach(f => {
+      f.dataset.selected = "false";
+      f.style.borderColor = "transparent";
+    });
+    // クリックしたものが未選択だったら選択
+    if (!isSelected) {
+      img.dataset.selected = "true";
+      img.style.borderColor = "#4f46e5";
+    }
+  }
+
   function collectRecipe() {
     const steps = [];
     document.querySelectorAll("#steps-list .step-card").forEach(card => {
@@ -527,7 +554,9 @@
       const caution = card.querySelector(".step-caution").value.trim() || null;
       const pointInclude = card.querySelector(".step-point-include").checked;
       const cautionInclude = card.querySelector(".step-caution-include").checked;
-      if (title) steps.push({ title, point, caution, point_in_summary: !!(point && pointInclude), caution_in_summary: !!(caution && cautionInclude) });
+      const selectedFrame = card.querySelector(".frame-candidate[data-selected='true']");
+      const selected_frame_url = selectedFrame ? selectedFrame.dataset.url : null;
+      if (title) steps.push({ title, point, caution, point_in_summary: !!(point && pointInclude), caution_in_summary: !!(caution && cautionInclude), selected_frame_url });
     });
 
     const detailsRaw = document.getElementById("mat-details").value.trim();
