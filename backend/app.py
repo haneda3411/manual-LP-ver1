@@ -406,16 +406,15 @@ def create_notion_page(recipe: dict, youtube_url: str, database_id: str, image_u
     # ③ 手順
     children.append(_para("[手順]", bold=True))
     for i, step in enumerate(steps, 1):
-        step_children = []
+        children.append(_para(f"工程{i}: {step.get('title', '')}", bold=True))
         if step.get("caution"):
-            step_children.append(_callout("⚠️ 注意点", step["caution"], color="yellow_background", icon="⚠️"))
+            children.append(_callout("⚠️ 注意点", step["caution"], color="yellow_background", icon="⚠️"))
         if step.get("point"):
-            step_children.append(_callout("💡 ポイント", step["point"], color="yellow_background", icon="💡"))
+            children.append(_callout("💡 ポイント", step["point"], color="yellow_background", icon="💡"))
         if step.get("selected_frame_url"):
-            step_children.append(_image(step["selected_frame_url"]))
+            children.append(_image(step["selected_frame_url"]))
         else:
-            step_children.append(_para("（ここに写真を追加）"))
-        children.append(_toggle(f"工程{i}: {step.get('title', '')}", step_children))
+            children.append(_para("（ここに写真を追加）"))
 
     # ④ 動画マニュアルフッター
     children.append(_para("動画マニュアルはこちら", bold=True))
