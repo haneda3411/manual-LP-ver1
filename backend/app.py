@@ -111,8 +111,49 @@ JSON形式のみで返答（対応不明な場合はnull）:
     return json.loads(content)
 
 
-def extract_and_upload_frames(video_path: str, step_timestamps: list, output_dir: str) -> list:
-    """各工程から3フレームを抽出してcatbox.moeにアップロードする"""
+def select_best_frames_with_vision(step_title: str, frame_paths: list, n: int = 3) -> list:
+    """Claude Visionで最も工程を表すフレームをn枚選択する"""
+    if len(frame_paths) <= n:
+        return frame_paths
+
+    content = [{
+        "type": "text",
+        "text": (f"以下は調理動画の「{step_title}」という工程を時系列順に撮影したフレームです（番号1〜{len(frame_paths)}）。"
+                 f"この工程の内容を最もよく表している上位{n}枚のフレーム番号を、カンマ区切りで返してください。例: 2,5,8")
+    }]
+    for i, path in enumerate(frame_paths):
+        with open(path, "rb") as f:
+            b64 = base64.b64encode(f.read()).decode()
+        content.append({"type": "text", "text": f"フレーム{i + 1}:"})
+        content.append({"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": b64}})
+
+    message = anthropic_client.messages.create(
+        model="claude-sonnet-4-5",
+        max_tokens=20,
+        messages=[{"role": "user", "content": content}],
+    )
+    result = message.content[0].text.strip()
+    selected = []
+    seen = set()
+    for part in re.split(r"[,、\s]+", result):
+        try:
+            idx = int(part.strip()) - 1
+            if 0 <= idx < len(frame_paths) and idx not in seen:
+                seen.add(idx)
+                selected.append(frame_paths[idx])
+        except ValueError:
+            pass
+    # 足りなければ未選択から補完
+    for i, path in enumerate(frame_paths):
+        if len(selected) >= n:
+            break
+        if i not in seen:
+            selected.append(path)
+    return selected[:n]
+
+
+def extract_and_upload_frames(video_path: str, step_timestamps: list, output_dir: str, steps: list = None) -> list:
+    """各工程から2〜3秒ごとにフレームを抽出しClaude Visionで上位3枚を選んでアップロードする"""
     results = []
     for item in step_timestamps:
         step_num = item.get("step", 0)
@@ -124,20 +165,39 @@ def extract_and_upload_frames(video_path: str, step_timestamps: list, output_dir
             continue
 
         duration = end - start
-        urls = []
-        for j, ratio in enumerate([0.2, 0.5, 0.8]):
-            ts = start + duration * ratio
+        interval = max(2.0, duration / 12)
+        timestamps = []
+        t = start + interval * 0.5
+        while t < end and len(timestamps) < 12:
+            timestamps.append(t)
+            t += interval
+
+        frame_paths = []
+        for j, ts in enumerate(timestamps):
             frame_path = os.path.join(output_dir, f"step{step_num}_frame{j}.jpg")
             cmd = ["ffmpeg", "-ss", f"{ts:.2f}", "-i", video_path,
                    "-frames:v", "1", "-q:v", "3", "-y", frame_path]
             r = subprocess.run(cmd, capture_output=True, timeout=30)
             if r.returncode == 0 and os.path.exists(frame_path):
-                try:
-                    with open(frame_path, "rb") as f:
-                        url = upload_image_to_public(f.read(), "image/jpeg")
-                    urls.append(url)
-                except Exception:
-                    pass
+                frame_paths.append(frame_path)
+
+        # Claude Visionで上位3枚を選択
+        step_title = ""
+        if steps and step_num <= len(steps):
+            step_title = steps[step_num - 1].get("title", "")
+        try:
+            best_paths = select_best_frames_with_vision(step_title, frame_paths, n=3)
+        except Exception:
+            best_paths = frame_paths[:3]
+
+        urls = []
+        for path in best_paths:
+            try:
+                with open(path, "rb") as f:
+                    url = upload_image_to_public(f.read(), "image/jpeg")
+                urls.append(url)
+            except Exception:
+                pass
 
         results.append({"step": step_num, "frame_urls": urls})
     return results
@@ -420,7 +480,7 @@ def process_video():
         # フレーム候補抽出（失敗しても処理継続）
         try:
             step_timestamps = map_steps_to_timestamps(recipe.get("steps", []), segments)
-            frame_results = extract_and_upload_frames(video_path, step_timestamps, tmpdir)
+            frame_results = extract_and_upload_frames(video_path, step_timestamps, tmpdir, steps=recipe.get("steps", []))
             frame_map = {f["step"]: f["frame_urls"] for f in frame_results}
             for i, step in enumerate(recipe.get("steps", []), 1):
                 step["frame_candidates"] = frame_map.get(i, [])
@@ -451,7 +511,7 @@ def create_notion():
     if not database_id:
         return jsonify({"error": f"カテゴリ「{category}」のデータベースIDが設定されていません"}), 500
 
-    # 画像アップロード（あれば）
+    # 完成写真アップロード（あれば）
     image_url = None
     if image_b64 and image_type:
         try:
@@ -459,6 +519,18 @@ def create_notion():
             image_url = upload_image_to_public(image_bytes, image_type)
         except Exception as e:
             return jsonify({"error": f"画像アップロードエラー: {str(e)}"}), 500
+
+    # 各工程の手動アップロード画像を処理
+    for step in recipe.get("steps", []):
+        manual_b64 = step.pop("manual_image_data", None)
+        manual_type = step.pop("manual_image_type", None)
+        if manual_b64 and manual_type and not step.get("selected_frame_url"):
+            try:
+                step["selected_frame_url"] = upload_image_to_public(
+                    base64.b64decode(manual_b64), manual_type
+                )
+            except Exception:
+                pass
 
     try:
         page = create_notion_page(recipe, youtube_url, database_id, image_url=image_url)

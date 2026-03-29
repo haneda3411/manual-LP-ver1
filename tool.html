@@ -510,17 +510,20 @@
             </label>
           </div>
         </div>
-        ${frames.length > 0 ? `
         <div style="margin-top:10px;padding-top:10px;border-top:1px solid #eee;">
-          <div style="font-size:0.78rem;color:#888;margin-bottom:6px;">📷 フレーム候補 — 使うものをクリック（もう一度クリックで解除）</div>
-          <div style="display:flex;gap:6px;">
-            ${frames.map((url, idx) => `
+          <div style="font-size:0.78rem;color:#888;margin-bottom:6px;">📷 工程の写真 — 使うものをクリック（もう一度クリックで解除）</div>
+          <div class="frames-container" style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-start;">
+            ${frames.map(url => `
               <img src="${url}" class="frame-candidate" data-url="${url}" data-selected="false"
-                style="flex:1;aspect-ratio:16/9;object-fit:cover;border-radius:6px;cursor:pointer;border:3px solid transparent;transition:border-color 0.15s;"
+                style="width:calc(33% - 4px);aspect-ratio:16/9;object-fit:cover;border-radius:6px;cursor:pointer;border:3px solid transparent;transition:border-color 0.15s;"
                 onclick="selectFrame(this)" />
             `).join('')}
           </div>
-        </div>` : ''}
+          <label style="display:inline-flex;align-items:center;gap:4px;margin-top:6px;font-size:0.78rem;color:#4f46e5;cursor:pointer;text-decoration:underline;">
+            <input type="file" accept="image/*" style="display:none;" onchange="handleStepImageUpload(this)">
+            + 写真を手動でアップロード
+          </label>
+        </div>
       </div>
     `;
     list.appendChild(div);
@@ -546,6 +549,32 @@
     }
   }
 
+  function handleStepImageUpload(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target.result;
+      const card = input.closest(".step-card");
+      const container = card.querySelector(".frames-container");
+      // 既存の手動アップロード画像を削除
+      container.querySelectorAll(".manual-upload-img").forEach(el => el.remove());
+      // サムネイルを追加
+      const img = document.createElement("img");
+      img.src = dataUrl;
+      img.className = "frame-candidate manual-upload-img";
+      img.dataset.selected = "false";
+      img.dataset.isManual = "true";
+      img.dataset.base64 = dataUrl.split(",")[1];
+      img.dataset.mimeType = file.type;
+      img.style.cssText = "width:calc(33% - 4px);aspect-ratio:16/9;object-fit:cover;border-radius:6px;cursor:pointer;border:3px solid transparent;transition:border-color 0.15s;";
+      img.onclick = () => selectFrame(img);
+      container.appendChild(img);
+      selectFrame(img);
+    };
+    reader.readAsDataURL(file);
+  }
+
   function collectRecipe() {
     const steps = [];
     document.querySelectorAll("#steps-list .step-card").forEach(card => {
@@ -555,8 +584,16 @@
       const pointInclude = card.querySelector(".step-point-include").checked;
       const cautionInclude = card.querySelector(".step-caution-include").checked;
       const selectedFrame = card.querySelector(".frame-candidate[data-selected='true']");
-      const selected_frame_url = selectedFrame ? selectedFrame.dataset.url : null;
-      if (title) steps.push({ title, point, caution, point_in_summary: !!(point && pointInclude), caution_in_summary: !!(caution && cautionInclude), selected_frame_url });
+      let selected_frame_url = null, manual_image_data = null, manual_image_type = null;
+      if (selectedFrame) {
+        if (selectedFrame.dataset.isManual === "true") {
+          manual_image_data = selectedFrame.dataset.base64;
+          manual_image_type = selectedFrame.dataset.mimeType;
+        } else {
+          selected_frame_url = selectedFrame.dataset.url;
+        }
+      }
+      if (title) steps.push({ title, point, caution, point_in_summary: !!(point && pointInclude), caution_in_summary: !!(caution && cautionInclude), selected_frame_url, manual_image_data, manual_image_type });
     });
 
     const detailsRaw = document.getElementById("mat-details").value.trim();
