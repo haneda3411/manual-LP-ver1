@@ -387,21 +387,9 @@ def create_notion_page(recipe: dict, youtube_url: str, database_id: str, image_u
 
     # ③ 材料
     children.append(_para("[材料]", bold=True))
-    if materials.get("main"):
-        children.append(_bullet([("主要食材", True), ("：" + materials["main"], False)]))
-    if materials.get("seasoning"):
-        children.append(_bullet([("調味料", True), ("：" + materials["seasoning"], False)]))
-    if materials.get("garnish"):
-        children.append(_bullet([("薬味", True), ("：" + materials["garnish"], False)]))
-
-    detail_list = materials.get("details", [])
-    if detail_list:
-        detail_blocks = [
-            {"object": "block", "type": "bulleted_list_item",
-             "bulleted_list_item": {"rich_text": [{"type": "text", "text": {"content": d}}]}}
-            for d in detail_list
-        ]
-        children.append(_toggle("材料（詳細量）", detail_blocks))
+    for d in materials.get("details", []):
+        children.append({"object": "block", "type": "bulleted_list_item",
+                         "bulleted_list_item": {"rich_text": [{"type": "text", "text": {"content": d}}]}})
 
     # ③ 手順
     children.append(_para("[手順]", bold=True))
