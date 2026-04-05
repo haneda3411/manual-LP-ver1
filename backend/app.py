@@ -30,6 +30,8 @@ NOTION_DB_MAP = {
     "焼き場調理マニュアル": os.environ.get("NOTION_DB_YAKIBA_CHORI"),
     "焼き場仕込みマニュアル": os.environ.get("NOTION_DB_YAKIBA_SHIKOMI"),
     "ドリンク作成マニュアル": os.environ.get("NOTION_DB_DRINK"),
+    "ランチ調理マニュアル": os.environ.get("NOTION_DB_LUNCH_CHORI"),
+    "ランチ仕込みマニュアル": os.environ.get("NOTION_DB_LUNCH_SHIKOMI"),
 }
 
 
@@ -359,7 +361,23 @@ def _toggle(title, children):
     }
 
 
-def create_notion_page(recipe: dict, youtube_url: str, database_id: str, image_url: str = None) -> dict:
+def get_select_properties(database_id: str) -> list:
+    """DBのselect/multi_selectプロパティ一覧を返す [{name, options:[{name,color}]}]"""
+    db = notion_client.databases.retrieve(database_id=database_id)
+    result = []
+    for prop_name, prop_data in db["properties"].items():
+        if prop_data["type"] == "select":
+            options = [{"name": o["name"], "color": o.get("color", "")}
+                       for o in prop_data["select"].get("options", [])]
+            result.append({"name": prop_name, "type": "select", "options": options})
+        elif prop_data["type"] == "multi_select":
+            options = [{"name": o["name"], "color": o.get("color", "")}
+                       for o in prop_data["multi_select"].get("options", [])]
+            result.append({"name": prop_name, "type": "multi_select", "options": options})
+    return result
+
+
+def create_notion_page(recipe: dict, youtube_url: str, database_id: str, image_url: str = None, extra_props: dict = None) -> dict:
     """Notion APIを使って構造化マニュアルページを作成する"""
     children = []
     materials = recipe.get("materials", {})
@@ -419,11 +437,20 @@ def create_notion_page(recipe: dict, youtube_url: str, database_id: str, image_u
         })
 
     title_prop = get_title_property_name(database_id)
+    properties = {
+        title_prop: {"title": [{"text": {"content": recipe.get("recipe_name", "マニュアル")}}]},
+    }
+    # 追加プロパティ（種類など）をセット
+    if extra_props:
+        for prop_name, prop_value in extra_props.items():
+            if prop_value.get("type") == "select":
+                properties[prop_name] = {"select": {"name": prop_value["value"]}}
+            elif prop_value.get("type") == "multi_select":
+                properties[prop_name] = {"multi_select": [{"name": v} for v in prop_value["value"]]}
+
     page_data = {
         "parent": {"database_id": database_id},
-        "properties": {
-            title_prop: {"title": [{"text": {"content": recipe.get("recipe_name", "マニュアル")}}]},
-        },
+        "properties": properties,
         "children": children,
     }
     return notion_client.pages.create(**page_data)
@@ -481,6 +508,20 @@ def process_video():
     })
 
 
+@app.route("/api/db-properties", methods=["GET"])
+def db_properties():
+    """カテゴリのDBが持つselectプロパティと選択肢を返す"""
+    category = request.args.get("category", "").strip()
+    database_id = NOTION_DB_MAP.get(category)
+    if not database_id:
+        return jsonify({"error": f"カテゴリ「{category}」が見つかりません"}), 404
+    try:
+        props = get_select_properties(database_id)
+        return jsonify({"properties": props})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/api/create-notion", methods=["POST"])
 def create_notion():
     """抽出済みレシピデータをNotionページとして作成する"""
@@ -488,6 +529,7 @@ def create_notion():
     recipe = data.get("recipe")
     youtube_url = data.get("url", "").strip()
     category = data.get("category", "").strip()
+    extra_props = data.get("extra_props")  # {prop_name: {type, value}}
     image_b64 = data.get("image")       # base64文字列（任意）
     image_type = data.get("image_type") # MIMEタイプ（例: image/jpeg）
 
@@ -520,7 +562,7 @@ def create_notion():
                 pass
 
     try:
-        page = create_notion_page(recipe, youtube_url, database_id, image_url=image_url)
+        page = create_notion_page(recipe, youtube_url, database_id, image_url=image_url, extra_props=extra_props)
         page_url = page.get("url", "")
         return jsonify({"notion_url": page_url})
     except Exception as e:

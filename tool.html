@@ -296,8 +296,11 @@
         <option value="焼き場調理マニュアル">焼き場調理マニュアル</option>
         <option value="焼き場仕込みマニュアル">焼き場仕込みマニュアル</option>
         <option value="ドリンク作成マニュアル">ドリンク作成マニュアル</option>
+        <option value="ランチ調理マニュアル">ランチ調理マニュアル</option>
+        <option value="ランチ仕込みマニュアル">ランチ仕込みマニュアル</option>
       </select>
     </div>
+    <div id="db-properties-section" style="display:none;margin-bottom:14px;"></div>
     <div class="input-group">
       <input type="url" id="youtube-url" placeholder="https://www.youtube.com/watch?v=..." />
       <button class="btn btn-primary" id="btn-process" onclick="processVideo()">解析開始</button>
@@ -398,6 +401,66 @@
   let currentCategory = "";
   let currentImageData = null;
   let currentImageType = null;
+  let currentDbProperties = []; // [{name, type, options:[{name,color}]}]
+  let currentExtraProps = {};   // {propName: {type, value}}
+
+  // カテゴリ変更時にDB種類プロパティを取得
+  document.getElementById("manual-category").addEventListener("change", async function() {
+    const category = this.value;
+    const section = document.getElementById("db-properties-section");
+    section.style.display = "none";
+    section.innerHTML = "";
+    currentDbProperties = [];
+    currentExtraProps = {};
+    if (!category) return;
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/db-properties?category=${encodeURIComponent(category)}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const props = data.properties || [];
+      if (props.length === 0) return;
+      currentDbProperties = props;
+      props.forEach(prop => {
+        const wrapper = document.createElement("div");
+        wrapper.style.cssText = "margin-bottom:10px;";
+        const label = document.createElement("label");
+        label.style.cssText = "display:block;font-size:0.82rem;font-weight:600;color:#555;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.04em;";
+        label.textContent = prop.name;
+        const select = document.createElement("select");
+        select.style.cssText = "width:100%;padding:10px 14px;border:1.5px solid #ddd;border-radius:8px;font-size:0.95rem;outline:none;background:#fff;";
+        select.dataset.propName = prop.name;
+        select.dataset.propType = prop.type;
+        const emptyOpt = document.createElement("option");
+        emptyOpt.value = "";
+        emptyOpt.textContent = "-- 選択してください（任意） --";
+        select.appendChild(emptyOpt);
+        (prop.options || []).forEach(opt => {
+          const o = document.createElement("option");
+          o.value = opt.name;
+          o.textContent = opt.name;
+          select.appendChild(o);
+        });
+        select.addEventListener("change", function() {
+          const pName = this.dataset.propName;
+          const pType = this.dataset.propType;
+          const val = this.value;
+          if (!val) {
+            delete currentExtraProps[pName];
+          } else if (pType === "select") {
+            currentExtraProps[pName] = { type: "select", value: val };
+          } else if (pType === "multi_select") {
+            currentExtraProps[pName] = { type: "multi_select", value: [val] };
+          }
+        });
+        wrapper.appendChild(label);
+        wrapper.appendChild(select);
+        section.appendChild(wrapper);
+      });
+      section.style.display = "block";
+    } catch (e) {
+      // DB propertiesの取得に失敗しても続行
+    }
+  });
 
   function setStatus(id, type, msg) {
     const el = document.getElementById(id);
@@ -625,7 +688,7 @@
       const res = await fetch(`${BACKEND_URL}/api/create-notion`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ recipe, url: currentYoutubeUrl, category: currentCategory, image: currentImageData, image_type: currentImageType }),
+        body: JSON.stringify({ recipe, url: currentYoutubeUrl, category: currentCategory, image: currentImageData, image_type: currentImageType, extra_props: Object.keys(currentExtraProps).length > 0 ? currentExtraProps : null }),
       });
       const data = await res.json();
 
@@ -654,6 +717,10 @@
     currentTranscript = "";
     currentYoutubeUrl = "";
     currentCategory = "";
+    currentDbProperties = [];
+    currentExtraProps = {};
+    document.getElementById("db-properties-section").style.display = "none";
+    document.getElementById("db-properties-section").innerHTML = "";
     clearImage();
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
