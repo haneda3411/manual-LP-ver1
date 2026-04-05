@@ -286,7 +286,20 @@
 
   <!-- Step 1: カテゴリ選択 + URL入力 -->
   <div class="card">
-    <h2>Step 1 — カテゴリを選んでYouTube URLを入力</h2>
+    <h2>Step 1 — カテゴリを選んで入力</h2>
+
+    <!-- モード切替 -->
+    <div style="display:flex;gap:8px;margin-bottom:18px;">
+      <button id="mode-btn-video" onclick="setMode('video')"
+        style="flex:1;padding:10px;border-radius:8px;border:1.5px solid #4f46e5;background:#4f46e5;color:#fff;font-size:0.92rem;font-weight:600;cursor:pointer;">
+        📹 動画から生成
+      </button>
+      <button id="mode-btn-text" onclick="setMode('text')"
+        style="flex:1;padding:10px;border-radius:8px;border:1.5px solid #4f46e5;background:#fff;color:#4f46e5;font-size:0.92rem;font-weight:600;cursor:pointer;">
+        📝 テキストから生成
+      </button>
+    </div>
+
     <div class="recipe-field" style="margin-bottom:14px">
       <label>マニュアルのカテゴリ</label>
       <select id="manual-category" style="width:100%;padding:12px 14px;border:1.5px solid #ddd;border-radius:8px;font-size:0.95rem;outline:none;background:#fff;transition:border-color 0.2s;">
@@ -301,9 +314,18 @@
       </select>
     </div>
     <div id="db-properties-section" style="display:none;margin-bottom:14px;"></div>
-    <div class="input-group">
+
+    <!-- 動画モード入力 -->
+    <div id="input-video" class="input-group">
       <input type="url" id="youtube-url" placeholder="https://www.youtube.com/watch?v=..." />
       <button class="btn btn-primary" id="btn-process" onclick="processVideo()">解析開始</button>
+    </div>
+
+    <!-- テキストモード入力 -->
+    <div id="input-text" style="display:none;">
+      <textarea id="manual-text" rows="8" placeholder="レシピや調理手順のテキストをここに貼り付けてください。&#10;例：エリンギにんにくバター焼きの作り方&#10;材料：エリンギ140g、にんにく1かけ、バター10g...&#10;&#10;手順：&#10;1. エリンギを縦に裂く&#10;2. ..."
+        style="width:100%;padding:12px 14px;border:1.5px solid #ddd;border-radius:8px;font-size:0.92rem;font-family:inherit;resize:vertical;outline:none;transition:border-color 0.2s;"></textarea>
+      <button class="btn btn-primary" style="margin-top:10px;width:100%;" id="btn-process-text" onclick="processText()">テキストを解析</button>
     </div>
     <div class="status" id="status-process">
       <div class="spinner"></div>
@@ -401,8 +423,62 @@
   let currentCategory = "";
   let currentImageData = null;
   let currentImageType = null;
+  let currentMode = "video"; // "video" | "text"
   let currentDbProperties = []; // [{name, type, options:[{name,color}]}]
   let currentExtraProps = {};   // {propName: {type, value}}
+
+  function setMode(mode) {
+    currentMode = mode;
+    const btnVideo = document.getElementById("mode-btn-video");
+    const btnText = document.getElementById("mode-btn-text");
+    const inputVideo = document.getElementById("input-video");
+    const inputText = document.getElementById("input-text");
+    if (mode === "video") {
+      btnVideo.style.background = "#4f46e5"; btnVideo.style.color = "#fff";
+      btnText.style.background = "#fff"; btnText.style.color = "#4f46e5";
+      inputVideo.style.display = "flex";
+      inputText.style.display = "none";
+    } else {
+      btnText.style.background = "#4f46e5"; btnText.style.color = "#fff";
+      btnVideo.style.background = "#fff"; btnVideo.style.color = "#4f46e5";
+      inputText.style.display = "block";
+      inputVideo.style.display = "none";
+    }
+  }
+
+  async function processText() {
+    const category = document.getElementById("manual-category").value;
+    if (!category) { alert("カテゴリを選択してください"); return; }
+    const text = document.getElementById("manual-text").value.trim();
+    if (!text) { alert("テキストを入力してください"); return; }
+
+    const btn = document.getElementById("btn-process-text");
+    btn.disabled = true;
+    setStatus("status-process", "loading", "テキストを解析中…");
+    document.getElementById("preview-section").style.display = "none";
+
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/process-text`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setStatus("status-process", "error", data.error || "解析に失敗しました");
+        return;
+      }
+      currentTranscript = data.transcript;
+      currentYoutubeUrl = "";
+      currentCategory = category;
+      hideStatus("status-process");
+      renderPreview(data.recipe);
+    } catch (e) {
+      setStatus("status-process", "error", "サーバーに接続できません。バックエンドが起動しているか確認してください。");
+    } finally {
+      btn.disabled = false;
+    }
+  }
 
   // カテゴリ変更時にDB種類プロパティを取得
   document.getElementById("manual-category").addEventListener("change", async function() {
@@ -721,6 +797,8 @@
     currentExtraProps = {};
     document.getElementById("db-properties-section").style.display = "none";
     document.getElementById("db-properties-section").innerHTML = "";
+    document.getElementById("manual-text").value = "";
+    setMode("video");
     clearImage();
     window.scrollTo({ top: 0, behavior: "smooth" });
   }

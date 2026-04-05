@@ -508,6 +508,27 @@ def process_video():
     })
 
 
+@app.route("/api/process-text", methods=["POST"])
+def process_text():
+    """テキスト入力からレシピ抽出（動画なし）"""
+    data = request.get_json()
+    text = data.get("text", "").strip()
+    if not text:
+        return jsonify({"error": "テキストが入力されていません"}), 400
+
+    try:
+        recipe = extract_recipe_info(text)
+    except json.JSONDecodeError as e:
+        return jsonify({"error": f"レシピ抽出エラー（JSON解析失敗）: {str(e)}"}), 500
+    except Exception as e:
+        return jsonify({"error": f"レシピ抽出エラー: {str(e)}"}), 500
+
+    for step in recipe.get("steps", []):
+        step.setdefault("frame_candidates", [])
+
+    return jsonify({"transcript": text, "recipe": recipe})
+
+
 @app.route("/api/db-properties", methods=["GET"])
 def db_properties():
     """カテゴリのDBが持つselectプロパティと選択肢を返す"""
