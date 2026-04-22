@@ -654,7 +654,7 @@
           <div class="frames-container" style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-start;">
             ${frames.map(url => `
               <img src="${url}" class="frame-candidate" data-url="${url}" data-selected="false"
-                style="width:calc(33% - 4px);aspect-ratio:16/9;object-fit:cover;border-radius:6px;cursor:pointer;border:3px solid transparent;transition:border-color 0.15s;"
+                style="height:160px;width:auto;max-width:calc(50% - 4px);object-fit:contain;border-radius:6px;cursor:pointer;border:3px solid transparent;transition:border-color 0.15s;background:#f0f0f0;"
                 onclick="selectFrame(this)" />
             `).join('')}
           </div>
@@ -706,7 +706,7 @@
       img.dataset.isManual = "true";
       img.dataset.base64 = dataUrl.split(",")[1];
       img.dataset.mimeType = file.type;
-      img.style.cssText = "width:calc(33% - 4px);aspect-ratio:16/9;object-fit:cover;border-radius:6px;cursor:pointer;border:3px solid transparent;transition:border-color 0.15s;";
+      img.style.cssText = "height:160px;width:auto;max-width:calc(50% - 4px);object-fit:contain;border-radius:6px;cursor:pointer;border:3px solid transparent;transition:border-color 0.15s;background:#f0f0f0;";
       img.onclick = () => selectFrame(img);
       container.appendChild(img);
       selectFrame(img);

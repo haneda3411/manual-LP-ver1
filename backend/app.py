@@ -409,6 +409,27 @@ def _image(url):
     }
 
 
+def _image_half_width(url):
+    """2カラムレイアウトで画像を半幅表示する"""
+    return {
+        "object": "block",
+        "type": "column_list",
+        "column_list": {},
+        "children": [
+            {
+                "type": "column",
+                "column": {},
+                "children": [_image(url)],
+            },
+            {
+                "type": "column",
+                "column": {},
+                "children": [{"object": "block", "type": "paragraph", "paragraph": {"rich_text": []}}],
+            },
+        ],
+    }
+
+
 def _toggle(title, children):
     return {
         "object": "block",
@@ -450,7 +471,7 @@ def create_notion_page(recipe: dict, youtube_url: str, database_id: str, image_u
     # ① 完成盛り付け
     children.append(_para("[完成盛り付け]", bold=True))
     if image_url:
-        children.append(_image(image_url))
+        children.append(_image_half_width(image_url))
     else:
         children.append(_callout("📷 完成写真", "ここに完成写真を追加してください\n盛り付けポイント：（写真追加後に記入）", color="yellow_background", icon="📷"))
 
@@ -481,7 +502,7 @@ def create_notion_page(recipe: dict, youtube_url: str, database_id: str, image_u
         if step.get("point"):
             children.append(_callout("💡 ポイント", step["point"], color="yellow_background", icon="💡"))
         if step.get("selected_frame_url"):
-            children.append(_image(step["selected_frame_url"]))
+            children.append(_image_half_width(step["selected_frame_url"]))
         else:
             children.append(_para("（ここに写真を追加）"))
 
