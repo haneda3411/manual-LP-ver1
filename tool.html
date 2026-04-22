@@ -522,8 +522,8 @@
           const val = this.value;
           if (!val) {
             delete currentExtraProps[pName];
-          } else if (pType === "select") {
-            currentExtraProps[pName] = { type: "select", value: val };
+          } else if (pType === "select" || pType === "status") {
+            currentExtraProps[pName] = { type: pType, value: val };
           } else if (pType === "multi_select") {
             currentExtraProps[pName] = { type: "multi_select", value: [val] };
           }

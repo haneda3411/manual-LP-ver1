@@ -362,7 +362,7 @@ def _toggle(title, children):
 
 
 def get_select_properties(database_id: str) -> list:
-    """DBのselect/multi_selectプロパティ一覧を返す [{name, options:[{name,color}]}]"""
+    """DBのselect/multi_select/statusプロパティ一覧を返す [{name, type, options:[{name,color}]}]"""
     db = notion_client.databases.retrieve(database_id=database_id)
     result = []
     for prop_name, prop_data in db["properties"].items():
@@ -374,6 +374,10 @@ def get_select_properties(database_id: str) -> list:
             options = [{"name": o["name"], "color": o.get("color", "")}
                        for o in prop_data["multi_select"].get("options", [])]
             result.append({"name": prop_name, "type": "multi_select", "options": options})
+        elif prop_data["type"] == "status":
+            options = [{"name": o["name"], "color": o.get("color", "")}
+                       for o in prop_data["status"].get("options", [])]
+            result.append({"name": prop_name, "type": "status", "options": options})
     return result
 
 
@@ -441,14 +445,15 @@ def create_notion_page(recipe: dict, youtube_url: str, database_id: str, image_u
         title_prop: {"title": [{"text": {"content": recipe.get("recipe_name", "マニュアル")}}]},
     }
     # 追加プロパティ（種類など）をセット
-    print(f"[DEBUG] extra_props received: {extra_props}")
     if extra_props:
         for prop_name, prop_value in extra_props.items():
-            if prop_value.get("type") == "select":
+            ptype = prop_value.get("type")
+            if ptype == "select":
                 properties[prop_name] = {"select": {"name": prop_value["value"]}}
-            elif prop_value.get("type") == "multi_select":
+            elif ptype == "multi_select":
                 properties[prop_name] = {"multi_select": [{"name": v} for v in prop_value["value"]]}
-    print(f"[DEBUG] properties to set: {list(properties.keys())}")
+            elif ptype == "status":
+                properties[prop_name] = {"status": {"name": prop_value["value"]}}
 
     page_data = {
         "parent": {"database_id": database_id},
