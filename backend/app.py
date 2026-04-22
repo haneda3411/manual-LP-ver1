@@ -410,23 +410,16 @@ def _image(url):
 
 
 def _image_half_width(url):
-    """2カラムレイアウトで画像を半幅表示する"""
+    """4カラムレイアウトで画像を1/4幅表示する"""
+    empty_col = {"type": "column", "column": {"children": [{"type": "paragraph", "paragraph": {"rich_text": []}}]}}
     return {
         "type": "column_list",
         "column_list": {
             "children": [
-                {
-                    "type": "column",
-                    "column": {
-                        "children": [_image(url)]
-                    },
-                },
-                {
-                    "type": "column",
-                    "column": {
-                        "children": [{"type": "paragraph", "paragraph": {"rich_text": []}}]
-                    },
-                },
+                {"type": "column", "column": {"children": [_image(url)]}},
+                empty_col,
+                empty_col,
+                empty_col,
             ]
         },
     }
