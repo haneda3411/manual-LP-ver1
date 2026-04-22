@@ -441,12 +441,14 @@ def create_notion_page(recipe: dict, youtube_url: str, database_id: str, image_u
         title_prop: {"title": [{"text": {"content": recipe.get("recipe_name", "マニュアル")}}]},
     }
     # 追加プロパティ（種類など）をセット
+    print(f"[DEBUG] extra_props received: {extra_props}")
     if extra_props:
         for prop_name, prop_value in extra_props.items():
             if prop_value.get("type") == "select":
                 properties[prop_name] = {"select": {"name": prop_value["value"]}}
             elif prop_value.get("type") == "multi_select":
                 properties[prop_name] = {"multi_select": [{"name": v} for v in prop_value["value"]]}
+    print(f"[DEBUG] properties to set: {list(properties.keys())}")
 
     page_data = {
         "parent": {"database_id": database_id},
