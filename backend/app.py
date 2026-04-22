@@ -278,24 +278,60 @@ def extract_recipe_info(transcript: str) -> dict:
 
 
 def upload_image_to_public(image_bytes: bytes, content_type: str) -> str:
-    """catbox.moeに画像をアップロードして公開URLを返す（無料・アカウント不要）"""
+    """画像を公開URLにアップロード。catbox.moe → litterbox → imgbbの順で試みる"""
+    import time
     ext = content_type.split("/")[-1].replace("jpeg", "jpg")
     filename = f"manual_{uuid.uuid4().hex[:8]}.{ext}"
 
-    response = requests.post(
-        "https://catbox.moe/user/api.php",
-        data={"reqtype": "fileupload"},
-        files={"fileToUpload": (filename, image_bytes, content_type)},
-        timeout=30,
-    )
+    # 1. catbox.moe（リトライ付き）
+    for attempt in range(3):
+        try:
+            r = requests.post(
+                "https://catbox.moe/user/api.php",
+                data={"reqtype": "fileupload"},
+                files={"fileToUpload": (filename, image_bytes, content_type)},
+                timeout=30,
+            )
+            url = r.text.strip()
+            if r.ok and url.startswith("http"):
+                return url
+        except Exception:
+            pass
+        if attempt < 2:
+            time.sleep(2 ** attempt)
 
-    if not response.ok:
-        raise RuntimeError(f"画像アップロードエラー ({response.status_code}): {response.text}")
+    # 2. litterbox.catbox.moe（1時間保持）
+    try:
+        r = requests.post(
+            "https://litterbox.catbox.moe/resources/internals/api.php",
+            data={"reqtype": "fileupload", "time": "1h"},
+            files={"fileToUpload": (filename, image_bytes, content_type)},
+            timeout=30,
+        )
+        url = r.text.strip()
+        if r.ok and url.startswith("http"):
+            return url
+    except Exception:
+        pass
 
-    url = response.text.strip()
-    if not url.startswith("http"):
-        raise RuntimeError(f"画像URLの取得に失敗しました: {url}")
-    return url
+    # 3. tmpfiles.org
+    try:
+        r = requests.post(
+            "https://tmpfiles.org/api/v1/upload",
+            files={"file": (filename, image_bytes, content_type)},
+            timeout=30,
+        )
+        if r.ok:
+            data = r.json()
+            raw_url = data.get("data", {}).get("url", "")
+            # tmpfiles.org のURLを直接ダウンロード用に変換
+            url = raw_url.replace("tmpfiles.org/", "tmpfiles.org/dl/")
+            if url.startswith("http"):
+                return url
+    except Exception:
+        pass
+
+    raise RuntimeError("全ての画像アップロードサービスが利用できませんでした")
 
 
 def get_title_property_name(database_id: str) -> str:
