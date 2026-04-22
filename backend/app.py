@@ -298,7 +298,7 @@ def upload_image_to_public(image_bytes: bytes, content_type: str) -> str:
     import time
     # JPEGの場合はリサイズ
     if "jpeg" in content_type or "jpg" in content_type or "image" in content_type:
-        image_bytes = resize_image_bytes(image_bytes, max_width=300)
+        image_bytes = resize_image_bytes(image_bytes, max_width=100)
     ext = content_type.split("/")[-1].replace("jpeg", "jpg")
     filename = f"manual_{uuid.uuid4().hex[:8]}.{ext}"
 
