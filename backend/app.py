@@ -277,9 +277,28 @@ def extract_recipe_info(transcript: str) -> dict:
     return json.loads(content)
 
 
+def resize_image_bytes(image_bytes: bytes, max_width: int = 300) -> bytes:
+    """ffmpegで画像を最大幅300pxにリサイズしてJPEGバイト列を返す"""
+    with tempfile.TemporaryDirectory() as d:
+        src = os.path.join(d, "in.jpg")
+        dst = os.path.join(d, "out.jpg")
+        with open(src, "wb") as f:
+            f.write(image_bytes)
+        cmd = ["ffmpeg", "-i", src, "-vf", f"scale='min({max_width},iw)':-2",
+               "-q:v", "3", "-y", dst]
+        r = subprocess.run(cmd, capture_output=True, timeout=30)
+        if r.returncode == 0 and os.path.exists(dst):
+            with open(dst, "rb") as f:
+                return f.read()
+    return image_bytes  # リサイズ失敗時は元画像を返す
+
+
 def upload_image_to_public(image_bytes: bytes, content_type: str) -> str:
-    """画像を公開URLにアップロード。catbox.moe → litterbox → imgbbの順で試みる"""
+    """画像を300px幅にリサイズしてアップロード。catbox.moe → litterbox → tmpfilesの順で試みる"""
     import time
+    # JPEGの場合はリサイズ
+    if "jpeg" in content_type or "jpg" in content_type or "image" in content_type:
+        image_bytes = resize_image_bytes(image_bytes, max_width=300)
     ext = content_type.split("/")[-1].replace("jpeg", "jpg")
     filename = f"manual_{uuid.uuid4().hex[:8]}.{ext}"
 
@@ -410,19 +429,7 @@ def _image(url):
 
 
 def _image_half_width(url):
-    """4カラムレイアウトで画像を1/4幅表示する"""
-    empty_col = {"type": "column", "column": {"children": [{"type": "paragraph", "paragraph": {"rich_text": []}}]}}
-    return {
-        "type": "column_list",
-        "column_list": {
-            "children": [
-                {"type": "column", "column": {"children": [_image(url)]}},
-                empty_col,
-                empty_col,
-                empty_col,
-            ]
-        },
-    }
+    return _image(url)
 
 
 def _toggle(title, children):
