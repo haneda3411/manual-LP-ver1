@@ -198,9 +198,9 @@ def extract_frames_as_base64(video_path: str, step_timestamps: list, output_dir:
         frame_paths = []
         for j, ts in enumerate(timestamps):
             frame_path = os.path.join(output_dir, f"step{step_num}_frame{j}.jpg")
-            # 480x270サムネイルとして抽出（軽量・高速）
+            # アスペクト比を維持してリサイズ（縦動画対応）
             cmd = ["ffmpeg", "-ss", f"{ts:.2f}", "-i", video_path,
-                   "-frames:v", "1", "-vf", "scale=480:270", "-q:v", "5", "-y", frame_path]
+                   "-frames:v", "1", "-vf", "scale=480:-2", "-q:v", "3", "-y", frame_path]
             r = subprocess.run(cmd, capture_output=True, timeout=30)
             if r.returncode == 0 and os.path.exists(frame_path):
                 frame_paths.append(frame_path)
