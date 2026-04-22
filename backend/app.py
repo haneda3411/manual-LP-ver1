@@ -154,31 +154,53 @@ def select_best_frames_with_vision(step_title: str, frame_paths: list, n: int = 
     return selected[:n]
 
 
-def extract_and_upload_frames(video_path: str, step_timestamps: list, output_dir: str, steps: list = None) -> list:
-    """各工程から2〜3秒ごとにフレームを抽出しClaude Visionで上位3枚を選んでアップロードする"""
+def get_video_duration(video_path: str) -> float:
+    """ffprobeで動画の長さ（秒）を取得する"""
+    cmd = ["ffprobe", "-v", "quiet", "-of", "csv=p=0",
+           "-show_entries", "format=duration", video_path]
+    r = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+    try:
+        return float(r.stdout.strip())
+    except Exception:
+        return 0.0
+
+
+def extract_frames_as_base64(video_path: str, step_timestamps: list, output_dir: str, steps: list = None) -> list:
+    """各工程からフレームを抽出しbase64データURLで返す（外部サービス不要）"""
+    # タイムスタンプがnullの工程のためにフォールバック用の動画長を取得
+    duration_total = get_video_duration(video_path)
+    n_steps = len(step_timestamps)
+
     results = []
-    for item in step_timestamps:
-        step_num = item.get("step", 0)
+    for idx, item in enumerate(step_timestamps):
+        step_num = item.get("step", idx + 1)
         start = item.get("start")
         end = item.get("end")
 
+        # タイムスタンプがnullの場合は動画を均等分割してフォールバック
+        if (start is None or end is None or end <= start) and duration_total > 0:
+            seg = duration_total / max(n_steps, 1)
+            start = seg * idx
+            end = seg * (idx + 1)
+
         if start is None or end is None or end <= start:
-            results.append({"step": step_num, "frame_urls": []})
+            results.append({"step": step_num, "frame_candidates": []})
             continue
 
         duration = end - start
-        interval = max(2.0, duration / 12)
+        interval = max(2.0, duration / 10)
         timestamps = []
         t = start + interval * 0.5
-        while t < end and len(timestamps) < 12:
+        while t < end and len(timestamps) < 10:
             timestamps.append(t)
             t += interval
 
         frame_paths = []
         for j, ts in enumerate(timestamps):
             frame_path = os.path.join(output_dir, f"step{step_num}_frame{j}.jpg")
+            # 480x270サムネイルとして抽出（軽量・高速）
             cmd = ["ffmpeg", "-ss", f"{ts:.2f}", "-i", video_path,
-                   "-frames:v", "1", "-q:v", "3", "-y", frame_path]
+                   "-frames:v", "1", "-vf", "scale=480:270", "-q:v", "5", "-y", frame_path]
             r = subprocess.run(cmd, capture_output=True, timeout=30)
             if r.returncode == 0 and os.path.exists(frame_path):
                 frame_paths.append(frame_path)
@@ -192,16 +214,17 @@ def extract_and_upload_frames(video_path: str, step_timestamps: list, output_dir
         except Exception:
             best_paths = frame_paths[:3]
 
-        urls = []
+        # base64データURLに変換（外部アップロード不要）
+        candidates = []
         for path in best_paths:
             try:
                 with open(path, "rb") as f:
-                    url = upload_image_to_public(f.read(), "image/jpeg")
-                urls.append(url)
+                    b64 = base64.b64encode(f.read()).decode()
+                candidates.append(f"data:image/jpeg;base64,{b64}")
             except Exception:
                 pass
 
-        results.append({"step": step_num, "frame_urls": urls})
+        results.append({"step": step_num, "frame_candidates": candidates})
     return results
 
 
@@ -501,11 +524,12 @@ def process_video():
         # フレーム候補抽出（失敗しても処理継続）
         try:
             step_timestamps = map_steps_to_timestamps(recipe.get("steps", []), segments)
-            frame_results = extract_and_upload_frames(video_path, step_timestamps, tmpdir, steps=recipe.get("steps", []))
-            frame_map = {f["step"]: f["frame_urls"] for f in frame_results}
+            frame_results = extract_frames_as_base64(video_path, step_timestamps, tmpdir, steps=recipe.get("steps", []))
+            frame_map = {f["step"]: f["frame_candidates"] for f in frame_results}
             for i, step in enumerate(recipe.get("steps", []), 1):
                 step["frame_candidates"] = frame_map.get(i, [])
-        except Exception:
+        except Exception as e:
+            print(f"[WARN] フレーム抽出エラー: {e}")
             for step in recipe.get("steps", []):
                 step.setdefault("frame_candidates", [])
 

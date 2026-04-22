@@ -729,7 +729,15 @@
           manual_image_data = selectedFrame.dataset.base64;
           manual_image_type = selectedFrame.dataset.mimeType;
         } else {
-          selected_frame_url = selectedFrame.dataset.url;
+          const frameUrl = selectedFrame.dataset.url || "";
+          if (frameUrl.startsWith("data:")) {
+            // base64データURL（AI抽出フレーム）
+            const commaIdx = frameUrl.indexOf(",");
+            manual_image_data = frameUrl.substring(commaIdx + 1);
+            manual_image_type = frameUrl.substring(5, frameUrl.indexOf(";"));
+          } else {
+            selected_frame_url = frameUrl;
+          }
         }
       }
       if (title) steps.push({ title, point, caution, point_in_summary: !!(point && pointInclude), caution_in_summary: !!(caution && cautionInclude), selected_frame_url, manual_image_data, manual_image_type });
