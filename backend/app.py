@@ -412,21 +412,23 @@ def _image(url):
 def _image_half_width(url):
     """2カラムレイアウトで画像を半幅表示する"""
     return {
-        "object": "block",
         "type": "column_list",
-        "column_list": {},
-        "children": [
-            {
-                "type": "column",
-                "column": {},
-                "children": [_image(url)],
-            },
-            {
-                "type": "column",
-                "column": {},
-                "children": [{"object": "block", "type": "paragraph", "paragraph": {"rich_text": []}}],
-            },
-        ],
+        "column_list": {
+            "children": [
+                {
+                    "type": "column",
+                    "column": {
+                        "children": [_image(url)]
+                    },
+                },
+                {
+                    "type": "column",
+                    "column": {
+                        "children": [{"type": "paragraph", "paragraph": {"rich_text": []}}]
+                    },
+                },
+            ]
+        },
     }
 
 
