@@ -297,7 +297,7 @@ def upload_image_to_public(image_bytes: bytes, content_type: str) -> str:
     """画像をリサイズしてアップロード。0x0.st → imgbb → tmpfiles.orgの順で試みる"""
     import time
     if "jpeg" in content_type or "jpg" in content_type or "image" in content_type:
-        image_bytes = resize_image_bytes(image_bytes, max_width=100)
+        image_bytes = resize_image_bytes(image_bytes, max_width=300)
     ext = content_type.split("/")[-1].replace("jpeg", "jpg")
     filename = f"manual_{uuid.uuid4().hex[:8]}.{ext}"
 
@@ -363,6 +363,8 @@ def get_title_property_name(database_id: str) -> str:
 
 
 def _para(text, bold=False):
+    if not text:
+        return {"object": "block", "type": "paragraph", "paragraph": {"rich_text": []}}
     return {
         "object": "block",
         "type": "paragraph",
@@ -463,7 +465,7 @@ def get_select_properties(database_id: str) -> list:
     return result
 
 
-def create_notion_page(recipe: dict, youtube_url: str, database_id: str, image_url: str = None, extra_props: dict = None) -> dict:
+def create_notion_page(recipe: dict, youtube_url: str, database_id: str, image_url: str = None, extra_props: dict = None, remarks: str = None, references: str = None) -> dict:
     """Notion APIを使って構造化マニュアルページを作成する"""
     children = []
     materials = recipe.get("materials", {})
@@ -505,12 +507,10 @@ def create_notion_page(recipe: dict, youtube_url: str, database_id: str, image_u
             children.append(_callout("💡 ポイント", step["point"], color="yellow_background", icon="💡"))
         if step.get("selected_frame_url"):
             children.append(_image_half_width(step["selected_frame_url"]))
-        else:
-            children.append(_para("（ここに写真を追加）"))
 
     # ④ 動画マニュアルフッター
-    children.append(_para("動画マニュアルはこちら", bold=True))
     if youtube_url:
+        children.append(_para("動画マニュアルはこちら", bold=True))
         link_text = f"▶ {video_title}" if video_title else f"▶ {youtube_url}"
         children.append({
             "object": "block",
@@ -521,6 +521,14 @@ def create_notion_page(recipe: dict, youtube_url: str, database_id: str, image_u
                 "icon": {"type": "emoji", "emoji": "▶️"},
             },
         })
+
+    # ⑤ 備考
+    children.append(_para("[備考]", bold=True))
+    children.append(_para(remarks if remarks else ""))
+
+    # ⑥ 参考資料
+    children.append(_para("[参考資料]", bold=True))
+    children.append(_para(references if references else ""))
 
     title_prop = get_title_property_name(database_id)
     properties = {
@@ -707,6 +715,8 @@ def create_notion():
     extra_props = data.get("extra_props")  # {prop_name: {type, value}}
     image_b64 = data.get("image")       # base64文字列（任意）
     image_type = data.get("image_type") # MIMEタイプ（例: image/jpeg）
+    remarks = data.get("remarks", "").strip()
+    references = data.get("references", "").strip()
 
     if not recipe:
         return jsonify({"error": "レシピデータがありません"}), 400
@@ -737,7 +747,7 @@ def create_notion():
                 pass
 
     try:
-        page = create_notion_page(recipe, youtube_url, database_id, image_url=image_url, extra_props=extra_props)
+        page = create_notion_page(recipe, youtube_url, database_id, image_url=image_url, extra_props=extra_props, remarks=remarks or None, references=references or None)
         page_url = page.get("url", "")
         return jsonify({"notion_url": page_url})
     except Exception as e:

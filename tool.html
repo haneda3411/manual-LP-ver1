@@ -414,6 +414,16 @@
       <input type="text" id="video-title" placeholder="例：【調理】エリンギニンニクバター焼き" />
     </div>
 
+    <div class="recipe-field">
+      <label>備考（任意）</label>
+      <textarea id="remarks" rows="3" placeholder="例：ランチタイムの限定メニュー。火加減が重要で、強火→弱火の切り替えがポイント。"></textarea>
+    </div>
+
+    <div class="recipe-field">
+      <label>参考資料（任意）</label>
+      <textarea id="references" rows="2" placeholder="例：仕込みシート参照、○○さんのレシピより"></textarea>
+    </div>
+
     <details style="margin-bottom:18px">
       <summary style="cursor:pointer; font-size:0.85rem; color:#888; margin-bottom:6px">文字起こしテキストを表示</summary>
       <div class="transcript-box" id="transcript-box"></div>
@@ -856,7 +866,16 @@
       const res = await fetch(`${BACKEND_URL}/api/create-notion`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ recipe, url: currentYoutubeUrl, category: currentCategory, image: currentImageData, image_type: currentImageType, extra_props: Object.keys(currentExtraProps).length > 0 ? currentExtraProps : null }),
+        body: JSON.stringify({
+          recipe,
+          url: currentYoutubeUrl,
+          category: currentCategory,
+          image: currentImageData,
+          image_type: currentImageType,
+          extra_props: Object.keys(currentExtraProps).length > 0 ? currentExtraProps : null,
+          remarks: document.getElementById("remarks").value.trim(),
+          references: document.getElementById("references").value.trim(),
+        }),
       });
       const data = await res.json();
 
@@ -890,6 +909,8 @@
     document.getElementById("db-properties-section").style.display = "none";
     document.getElementById("db-properties-section").innerHTML = "";
     document.getElementById("manual-text").value = "";
+    document.getElementById("remarks").value = "";
+    document.getElementById("references").value = "";
     imageModeFiles = [];
     document.getElementById("image-mode-preview").innerHTML = "";
     document.getElementById("image-mode-input").value = "";
