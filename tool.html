@@ -298,6 +298,10 @@
         style="flex:1;padding:10px;border-radius:8px;border:1.5px solid #4f46e5;background:#fff;color:#4f46e5;font-size:0.92rem;font-weight:600;cursor:pointer;">
         📝 テキストから生成
       </button>
+      <button id="mode-btn-image" onclick="setMode('image')"
+        style="flex:1;padding:10px;border-radius:8px;border:1.5px solid #4f46e5;background:#fff;color:#4f46e5;font-size:0.92rem;font-weight:600;cursor:pointer;">
+        🖼️ 画像から生成
+      </button>
     </div>
 
     <div class="recipe-field" style="margin-bottom:14px">
@@ -319,6 +323,20 @@
     <div id="input-video" class="input-group">
       <input type="url" id="youtube-url" placeholder="https://www.youtube.com/watch?v=..." />
       <button class="btn btn-primary" id="btn-process" onclick="processVideo()">解析開始</button>
+    </div>
+
+    <!-- 画像モード入力 -->
+    <div id="input-image" style="display:none;">
+      <div id="image-mode-drop" onclick="document.getElementById('image-mode-input').click()"
+        style="border:2px dashed #d0d0d0;border-radius:10px;padding:20px;text-align:center;cursor:pointer;background:#fafafa;min-height:100px;"
+        ondragover="event.preventDefault();this.style.borderColor='#4f46e5';"
+        ondragleave="this.style.borderColor='#d0d0d0';"
+        ondrop="handleImageModeDrop(event)">
+        <div style="color:#999;font-size:0.9rem;">🖼️ クリックまたはドラッグ＆ドロップで画像を選択（複数可）</div>
+        <div id="image-mode-preview" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;justify-content:center;"></div>
+      </div>
+      <input type="file" id="image-mode-input" accept="image/*" multiple style="display:none;" onchange="handleImageModeSelect(event)" />
+      <button class="btn btn-primary" style="margin-top:10px;width:100%;" id="btn-process-image" onclick="processImage()">画像を解析</button>
     </div>
 
     <!-- テキストモード入力 -->
@@ -423,26 +441,78 @@
   let currentCategory = "";
   let currentImageData = null;
   let currentImageType = null;
-  let currentMode = "video"; // "video" | "text"
+  let currentMode = "video"; // "video" | "text" | "image"
+  let imageModeFiles = []; // [{data: base64, type: mime}]
   let currentDbProperties = []; // [{name, type, options:[{name,color}]}]
   let currentExtraProps = {};   // {propName: {type, value}}
 
   function setMode(mode) {
     currentMode = mode;
-    const btnVideo = document.getElementById("mode-btn-video");
-    const btnText = document.getElementById("mode-btn-text");
-    const inputVideo = document.getElementById("input-video");
-    const inputText = document.getElementById("input-text");
-    if (mode === "video") {
-      btnVideo.style.background = "#4f46e5"; btnVideo.style.color = "#fff";
-      btnText.style.background = "#fff"; btnText.style.color = "#4f46e5";
-      inputVideo.style.display = "flex";
-      inputText.style.display = "none";
-    } else {
-      btnText.style.background = "#4f46e5"; btnText.style.color = "#fff";
-      btnVideo.style.background = "#fff"; btnVideo.style.color = "#4f46e5";
-      inputText.style.display = "block";
-      inputVideo.style.display = "none";
+    const btns = { video: "mode-btn-video", text: "mode-btn-text", image: "mode-btn-image" };
+    const inputs = { video: "input-video", text: "input-text", image: "input-image" };
+    Object.keys(btns).forEach(m => {
+      const btn = document.getElementById(btns[m]);
+      btn.style.background = m === mode ? "#4f46e5" : "#fff";
+      btn.style.color = m === mode ? "#fff" : "#4f46e5";
+    });
+    Object.keys(inputs).forEach(m => {
+      const el = document.getElementById(inputs[m]);
+      el.style.display = m === mode ? (m === "video" ? "flex" : "block") : "none";
+    });
+  }
+
+  function handleImageModeSelect(event) {
+    Array.from(event.target.files).forEach(f => addImageModeFile(f));
+  }
+
+  function handleImageModeDrop(event) {
+    event.preventDefault();
+    document.getElementById("image-mode-drop").style.borderColor = "#d0d0d0";
+    Array.from(event.dataTransfer.files).filter(f => f.type.startsWith("image/")).forEach(f => addImageModeFile(f));
+  }
+
+  function addImageModeFile(file) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const dataUrl = e.target.result;
+      const base64 = dataUrl.split(",")[1];
+      imageModeFiles.push({ data: base64, type: file.type });
+      const preview = document.getElementById("image-mode-preview");
+      const img = document.createElement("img");
+      img.src = dataUrl;
+      img.style.cssText = "height:80px;width:auto;border-radius:6px;object-fit:contain;";
+      preview.appendChild(img);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function processImage() {
+    const category = document.getElementById("manual-category").value;
+    if (!category) { alert("カテゴリを選択してください"); return; }
+    if (imageModeFiles.length === 0) { alert("画像を選択してください"); return; }
+
+    const btn = document.getElementById("btn-process-image");
+    btn.disabled = true;
+    setStatus("status-process", "loading", "画像を解析中…");
+    document.getElementById("preview-section").style.display = "none";
+
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/process-image`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ images: imageModeFiles }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setStatus("status-process", "error", data.error || "解析に失敗しました"); return; }
+      currentTranscript = "";
+      currentYoutubeUrl = "";
+      currentCategory = category;
+      hideStatus("status-process");
+      renderPreview(data.recipe);
+    } catch (e) {
+      setStatus("status-process", "error", "サーバーに接続できません。");
+    } finally {
+      btn.disabled = false;
     }
   }
 
@@ -628,6 +698,8 @@
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
         <span style="background:#4f46e5;color:#fff;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:0.78rem;font-weight:700;flex-shrink:0;" class="step-num">${num}</span>
         <input type="text" class="step-title" placeholder="工程の説明" value="${escHtml(title)}" style="flex:1;padding:8px 10px;border:1.5px solid #e0e0e0;border-radius:6px;font-size:0.92rem;outline:none;" />
+        <button class="btn-remove" onclick="moveStep(this,-1)" title="上へ" style="font-size:1rem;">↑</button>
+        <button class="btn-remove" onclick="moveStep(this,1)" title="下へ" style="font-size:1rem;">↓</button>
         <button class="btn-remove" onclick="removeStep(this)" title="削除">×</button>
       </div>
       <div style="display:flex;flex-direction:column;gap:6px;padding-left:32px;">
@@ -670,6 +742,18 @@
 
   function removeStep(btn) {
     btn.closest(".step-card").remove();
+    document.querySelectorAll(".step-num").forEach((el, i) => { el.textContent = i + 1; });
+  }
+
+  function moveStep(btn, dir) {
+    const card = btn.closest(".step-card");
+    const list = document.getElementById("steps-list");
+    const cards = Array.from(list.querySelectorAll(".step-card"));
+    const idx = cards.indexOf(card);
+    const target = cards[idx + dir];
+    if (!target) return;
+    if (dir === -1) list.insertBefore(card, target);
+    else list.insertBefore(target, card);
     document.querySelectorAll(".step-num").forEach((el, i) => { el.textContent = i + 1; });
   }
 
@@ -806,6 +890,9 @@
     document.getElementById("db-properties-section").style.display = "none";
     document.getElementById("db-properties-section").innerHTML = "";
     document.getElementById("manual-text").value = "";
+    imageModeFiles = [];
+    document.getElementById("image-mode-preview").innerHTML = "";
+    document.getElementById("image-mode-input").value = "";
     setMode("video");
     clearImage();
     window.scrollTo({ top: 0, behavior: "smooth" });

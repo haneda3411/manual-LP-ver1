@@ -619,6 +619,70 @@ def process_text():
     return jsonify({"transcript": text, "recipe": recipe})
 
 
+@app.route("/api/process-image", methods=["POST"])
+def process_image():
+    """画像入力からレシピ抽出（Claude Vision）"""
+    data = request.get_json()
+    images = data.get("images", [])  # [{data: base64, type: mime_type}]
+    if not images:
+        return jsonify({"error": "画像が選択されていません"}), 400
+
+    system_prompt = """あなたは調理マニュアル作成の専門AIです。
+提供された画像（レシピカード・メモ・調理写真など）から、以下のJSON形式で情報を抽出してください。
+
+{
+  "recipe_name": "メニュー名",
+  "materials": {
+    "main": "主要食材の概要",
+    "seasoning": "調味料の概要",
+    "garnish": "薬味の概要。なければ空文字",
+    "details": ["食材名：分量"]
+  },
+  "steps": [
+    {
+      "title": "工程の短い説明（一文、動詞で終わる）",
+      "point": "ポイント・コツ。なければnull",
+      "caution": "注意点。なければnull"
+    }
+  ],
+  "video_title": "マニュアルタイトル"
+}
+
+ルール：
+- stepsは工程ごとに分割する（目安3〜8工程）
+- 画像から読み取れない情報は空文字またはnullを使用
+- 必ずJSON形式のみで返答"""
+
+    content = [{"type": "text", "text": "以下の画像からマニュアル情報を抽出してください。"}]
+    for img in images:
+        content.append({
+            "type": "image",
+            "source": {"type": "base64", "media_type": img["type"], "data": img["data"]}
+        })
+
+    try:
+        message = anthropic_client.messages.create(
+            model="claude-sonnet-4-5",
+            max_tokens=2048,
+            messages=[{"role": "user", "content": content}],
+            system=system_prompt,
+        )
+        raw = message.content[0].text.strip()
+        m = re.search(r"```(?:json)?\s*([\s\S]*?)```", raw)
+        if m:
+            raw = m.group(1).strip()
+        recipe = json.loads(raw)
+    except json.JSONDecodeError as e:
+        return jsonify({"error": f"レシピ抽出エラー（JSON解析失敗）: {str(e)}"}), 500
+    except Exception as e:
+        return jsonify({"error": f"レシピ抽出エラー: {str(e)}"}), 500
+
+    for step in recipe.get("steps", []):
+        step.setdefault("frame_candidates", [])
+
+    return jsonify({"transcript": "", "recipe": recipe})
+
+
 @app.route("/api/db-properties", methods=["GET"])
 def db_properties():
     """カテゴリのDBが持つselectプロパティと選択肢を返す"""
