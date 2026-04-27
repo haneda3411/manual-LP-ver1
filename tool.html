@@ -499,10 +499,28 @@
       const base64 = dataUrl.split(",")[1];
       imageModeFiles.push({ data: base64, type: file.type });
       const preview = document.getElementById("image-mode-preview");
+
+      const wrapper = document.createElement("div");
+      wrapper.style.cssText = "position:relative;display:inline-block;";
+
       const img = document.createElement("img");
       img.src = dataUrl;
       img.style.cssText = "height:80px;width:auto;border-radius:6px;object-fit:contain;";
-      preview.appendChild(img);
+
+      const delBtn = document.createElement("button");
+      delBtn.textContent = "×";
+      delBtn.style.cssText = "position:absolute;top:-6px;right:-6px;background:#ef4444;color:#fff;border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;font-size:0.85rem;line-height:1;padding:0;";
+      delBtn.onclick = ev => {
+        ev.stopPropagation();
+        const wrappers = Array.from(preview.querySelectorAll(":scope > div"));
+        const idx = wrappers.indexOf(wrapper);
+        if (idx !== -1) imageModeFiles.splice(idx, 1);
+        wrapper.remove();
+      };
+
+      wrapper.appendChild(img);
+      wrapper.appendChild(delBtn);
+      preview.appendChild(wrapper);
     };
     reader.readAsDataURL(file);
   }
