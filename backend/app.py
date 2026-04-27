@@ -294,21 +294,19 @@ def resize_image_bytes(image_bytes: bytes, max_width: int = 300) -> bytes:
 
 
 def upload_image_to_public(image_bytes: bytes, content_type: str) -> str:
-    """画像を300px幅にリサイズしてアップロード。catbox.moe → litterbox → tmpfilesの順で試みる"""
+    """画像をリサイズしてアップロード。0x0.st → imgbb → tmpfiles.orgの順で試みる"""
     import time
-    # JPEGの場合はリサイズ
     if "jpeg" in content_type or "jpg" in content_type or "image" in content_type:
         image_bytes = resize_image_bytes(image_bytes, max_width=100)
     ext = content_type.split("/")[-1].replace("jpeg", "jpg")
     filename = f"manual_{uuid.uuid4().hex[:8]}.{ext}"
 
-    # 1. catbox.moe（リトライ付き）
+    # 1. 0x0.st（シンプルで信頼性が高い）
     for attempt in range(3):
         try:
             r = requests.post(
-                "https://catbox.moe/user/api.php",
-                data={"reqtype": "fileupload"},
-                files={"fileToUpload": (filename, image_bytes, content_type)},
+                "https://0x0.st",
+                files={"file": (filename, image_bytes, content_type)},
                 timeout=30,
             )
             url = r.text.strip()
@@ -319,19 +317,22 @@ def upload_image_to_public(image_bytes: bytes, content_type: str) -> str:
         if attempt < 2:
             time.sleep(2 ** attempt)
 
-    # 2. litterbox.catbox.moe（1時間保持）
-    try:
-        r = requests.post(
-            "https://litterbox.catbox.moe/resources/internals/api.php",
-            data={"reqtype": "fileupload", "time": "1h"},
-            files={"fileToUpload": (filename, image_bytes, content_type)},
-            timeout=30,
-        )
-        url = r.text.strip()
-        if r.ok and url.startswith("http"):
-            return url
-    except Exception:
-        pass
+    # 2. imgbb（APIキーあれば使用）
+    imgbb_key = os.environ.get("IMGBB_API_KEY", "")
+    if imgbb_key:
+        try:
+            b64_data = base64.b64encode(image_bytes).decode()
+            r = requests.post(
+                "https://api.imgbb.com/1/upload",
+                data={"key": imgbb_key, "image": b64_data},
+                timeout=30,
+            )
+            if r.ok:
+                url = r.json().get("data", {}).get("url", "")
+                if url.startswith("http"):
+                    return url
+        except Exception:
+            pass
 
     # 3. tmpfiles.org
     try:
@@ -343,7 +344,6 @@ def upload_image_to_public(image_bytes: bytes, content_type: str) -> str:
         if r.ok:
             data = r.json()
             raw_url = data.get("data", {}).get("url", "")
-            # tmpfiles.org のURLを直接ダウンロード用に変換
             url = raw_url.replace("tmpfiles.org/", "tmpfiles.org/dl/")
             if url.startswith("http"):
                 return url
