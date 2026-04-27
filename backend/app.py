@@ -431,16 +431,17 @@ def _image(url):
 
 
 def _image_left(url):
-    """2カラムレイアウトで画像を左寄せ表示"""
+    """2カラムレイアウトで画像を左寄せ表示（column_list/columnのchildrenは型オブジェクト内に置く）"""
     empty = {"object": "block", "type": "paragraph", "paragraph": {"rich_text": []}}
     return {
         "object": "block",
         "type": "column_list",
-        "column_list": {},
-        "children": [
-            {"object": "block", "type": "column", "column": {}, "children": [_image(url)]},
-            {"object": "block", "type": "column", "column": {}, "children": [empty]},
-        ],
+        "column_list": {
+            "children": [
+                {"object": "block", "type": "column", "column": {"children": [_image(url)]}},
+                {"object": "block", "type": "column", "column": {"children": [empty]}},
+            ]
+        },
     }
 
 
