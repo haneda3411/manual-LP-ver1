@@ -277,15 +277,15 @@ def extract_recipe_info(transcript: str) -> dict:
     return json.loads(content)
 
 
-def resize_image_bytes(image_bytes: bytes, max_width: int = 300) -> bytes:
-    """ffmpegで画像を最大幅300pxにリサイズしてJPEGバイト列を返す"""
+def resize_image_bytes(image_bytes: bytes, max_width: int = 450) -> bytes:
+    """ffmpegで画像を指定幅にリサイズしてJPEGバイト列を返す（高品質設定）"""
     with tempfile.TemporaryDirectory() as d:
         src = os.path.join(d, "in.jpg")
         dst = os.path.join(d, "out.jpg")
         with open(src, "wb") as f:
             f.write(image_bytes)
         cmd = ["ffmpeg", "-i", src, "-vf", f"scale='min({max_width},iw)':-2",
-               "-q:v", "3", "-y", dst]
+               "-q:v", "2", "-y", dst]
         r = subprocess.run(cmd, capture_output=True, timeout=30)
         if r.returncode == 0 and os.path.exists(dst):
             with open(dst, "rb") as f:
@@ -294,8 +294,10 @@ def resize_image_bytes(image_bytes: bytes, max_width: int = 300) -> bytes:
 
 
 def upload_image_to_public(image_bytes: bytes, content_type: str) -> str:
-    """画像をそのままアップロード（リサイズなし）。0x0.st → imgbb → tmpfiles.orgの順で試みる"""
+    """画像を450px幅・高品質でリサイズしてアップロード。0x0.st → imgbb → tmpfiles.orgの順で試みる"""
     import time
+    if "jpeg" in content_type or "jpg" in content_type or "image" in content_type:
+        image_bytes = resize_image_bytes(image_bytes, max_width=450)
     ext = content_type.split("/")[-1].replace("jpeg", "jpg")
     filename = f"manual_{uuid.uuid4().hex[:8]}.{ext}"
 
@@ -428,8 +430,18 @@ def _image(url):
     }
 
 
-def _image_half_width(url):
-    return _image(url)
+def _image_left(url):
+    """2カラムレイアウトで画像を左寄せ表示"""
+    empty = {"object": "block", "type": "paragraph", "paragraph": {"rich_text": []}}
+    return {
+        "object": "block",
+        "type": "column_list",
+        "column_list": {},
+        "children": [
+            {"object": "block", "type": "column", "column": {}, "children": [_image(url)]},
+            {"object": "block", "type": "column", "column": {}, "children": [empty]},
+        ],
+    }
 
 
 def _toggle(title, children):
@@ -473,7 +485,7 @@ def create_notion_page(recipe: dict, youtube_url: str, database_id: str, image_u
     # ① 完成盛り付け
     children.append(_para("[完成盛り付け]", bold=True))
     if image_url:
-        children.append(_image_half_width(image_url))
+        children.append(_image_left(image_url))
     else:
         children.append(_callout("📷 完成写真", "ここに完成写真を追加してください\n盛り付けポイント：（写真追加後に記入）", color="yellow_background", icon="📷"))
 
@@ -504,7 +516,7 @@ def create_notion_page(recipe: dict, youtube_url: str, database_id: str, image_u
         if step.get("point"):
             children.append(_callout("💡 ポイント", step["point"], color="yellow_background", icon="💡"))
         if step.get("selected_frame_url"):
-            children.append(_image_half_width(step["selected_frame_url"]))
+            children.append(_image_left(step["selected_frame_url"]))
 
     # ④ 動画マニュアルフッター
     if youtube_url:
@@ -527,7 +539,7 @@ def create_notion_page(recipe: dict, youtube_url: str, database_id: str, image_u
     # ⑥ 参考資料
     children.append(_para("[参考資料]", bold=True))
     if references_image_url:
-        children.append(_image(references_image_url))
+        children.append(_image_left(references_image_url))
 
     title_prop = get_title_property_name(database_id)
     properties = {
