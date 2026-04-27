@@ -294,10 +294,8 @@ def resize_image_bytes(image_bytes: bytes, max_width: int = 300) -> bytes:
 
 
 def upload_image_to_public(image_bytes: bytes, content_type: str) -> str:
-    """画像をリサイズしてアップロード。0x0.st → imgbb → tmpfiles.orgの順で試みる"""
+    """画像をそのままアップロード（リサイズなし）。0x0.st → imgbb → tmpfiles.orgの順で試みる"""
     import time
-    if "jpeg" in content_type or "jpg" in content_type or "image" in content_type:
-        image_bytes = resize_image_bytes(image_bytes, max_width=300)
     ext = content_type.split("/")[-1].replace("jpeg", "jpg")
     filename = f"manual_{uuid.uuid4().hex[:8]}.{ext}"
 
@@ -465,7 +463,7 @@ def get_select_properties(database_id: str) -> list:
     return result
 
 
-def create_notion_page(recipe: dict, youtube_url: str, database_id: str, image_url: str = None, extra_props: dict = None, remarks: str = None, references: str = None) -> dict:
+def create_notion_page(recipe: dict, youtube_url: str, database_id: str, image_url: str = None, extra_props: dict = None, remarks: str = None, references_image_url: str = None) -> dict:
     """Notion APIを使って構造化マニュアルページを作成する"""
     children = []
     materials = recipe.get("materials", {})
@@ -528,7 +526,8 @@ def create_notion_page(recipe: dict, youtube_url: str, database_id: str, image_u
 
     # ⑥ 参考資料
     children.append(_para("[参考資料]", bold=True))
-    children.append(_para(references if references else ""))
+    if references_image_url:
+        children.append(_image(references_image_url))
 
     title_prop = get_title_property_name(database_id)
     properties = {
@@ -716,7 +715,8 @@ def create_notion():
     image_b64 = data.get("image")       # base64文字列（任意）
     image_type = data.get("image_type") # MIMEタイプ（例: image/jpeg）
     remarks = data.get("remarks", "").strip()
-    references = data.get("references", "").strip()
+    references_image_b64 = data.get("references_image", "")
+    references_image_type = data.get("references_image_type", "")
 
     if not recipe:
         return jsonify({"error": "レシピデータがありません"}), 400
@@ -734,6 +734,16 @@ def create_notion():
         except Exception as e:
             return jsonify({"error": f"画像アップロードエラー: {str(e)}"}), 500
 
+    # 参考資料画像アップロード（あれば）
+    references_image_url = None
+    if references_image_b64 and references_image_type:
+        try:
+            references_image_url = upload_image_to_public(
+                base64.b64decode(references_image_b64), references_image_type
+            )
+        except Exception:
+            pass
+
     # 各工程の手動アップロード画像を処理
     for step in recipe.get("steps", []):
         manual_b64 = step.pop("manual_image_data", None)
@@ -747,7 +757,7 @@ def create_notion():
                 pass
 
     try:
-        page = create_notion_page(recipe, youtube_url, database_id, image_url=image_url, extra_props=extra_props, remarks=remarks or None, references=references or None)
+        page = create_notion_page(recipe, youtube_url, database_id, image_url=image_url, extra_props=extra_props, remarks=remarks or None, references_image_url=references_image_url)
         page_url = page.get("url", "")
         return jsonify({"notion_url": page_url})
     except Exception as e:
