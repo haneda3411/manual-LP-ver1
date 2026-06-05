@@ -294,14 +294,31 @@ def resize_image_bytes(image_bytes: bytes, max_width: int = 450) -> bytes:
 
 
 def upload_image_to_public(image_bytes: bytes, content_type: str) -> str:
-    """画像を450px幅・高品質でリサイズしてアップロード。0x0.st → imgbb → tmpfiles.orgの順で試みる"""
+    """画像を永続保存サービスにアップロード。imgbb（永続）→ 0x0.st（最大1年）の順で試みる"""
     import time
     if "jpeg" in content_type or "jpg" in content_type or "image" in content_type:
         image_bytes = resize_image_bytes(image_bytes, max_width=450)
     ext = content_type.split("/")[-1].replace("jpeg", "jpg")
     filename = f"manual_{uuid.uuid4().hex[:8]}.{ext}"
 
-    # 1. 0x0.st（シンプルで信頼性が高い）
+    # 1. imgbb（永続保存・無料APIキー必要: https://api.imgbb.com/）
+    imgbb_key = os.environ.get("IMGBB_API_KEY", "")
+    if imgbb_key:
+        try:
+            b64_data = base64.b64encode(image_bytes).decode()
+            r = requests.post(
+                "https://api.imgbb.com/1/upload",
+                data={"key": imgbb_key, "image": b64_data, "name": filename},
+                timeout=30,
+            )
+            if r.ok:
+                url = r.json().get("data", {}).get("url", "")
+                if url.startswith("http"):
+                    return url
+        except Exception:
+            pass
+
+    # 2. 0x0.st（最大1年保存・APIキー不要）
     for attempt in range(3):
         try:
             r = requests.post(
@@ -317,40 +334,7 @@ def upload_image_to_public(image_bytes: bytes, content_type: str) -> str:
         if attempt < 2:
             time.sleep(2 ** attempt)
 
-    # 2. imgbb（APIキーあれば使用）
-    imgbb_key = os.environ.get("IMGBB_API_KEY", "")
-    if imgbb_key:
-        try:
-            b64_data = base64.b64encode(image_bytes).decode()
-            r = requests.post(
-                "https://api.imgbb.com/1/upload",
-                data={"key": imgbb_key, "image": b64_data},
-                timeout=30,
-            )
-            if r.ok:
-                url = r.json().get("data", {}).get("url", "")
-                if url.startswith("http"):
-                    return url
-        except Exception:
-            pass
-
-    # 3. tmpfiles.org
-    try:
-        r = requests.post(
-            "https://tmpfiles.org/api/v1/upload",
-            files={"file": (filename, image_bytes, content_type)},
-            timeout=30,
-        )
-        if r.ok:
-            data = r.json()
-            raw_url = data.get("data", {}).get("url", "")
-            url = raw_url.replace("tmpfiles.org/", "tmpfiles.org/dl/")
-            if url.startswith("http"):
-                return url
-    except Exception:
-        pass
-
-    raise RuntimeError("全ての画像アップロードサービスが利用できませんでした")
+    raise RuntimeError("画像のアップロードに失敗しました。IMGBB_API_KEYの設定を確認してください")
 
 
 def get_title_property_name(database_id: str) -> str:
