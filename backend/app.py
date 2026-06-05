@@ -8,7 +8,7 @@ import base64
 from pathlib import Path
 
 import requests
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
 import anthropic
@@ -775,12 +775,6 @@ def create_notion():
         return jsonify({"notion_url": page_url})
     except Exception as e:
         return jsonify({"error": f"Notionページ作成エラー: {str(e)}"}), 500
-
-
-@app.route("/")
-def index():
-    tool_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "tool.html")
-    return send_file(tool_path)
 
 
 @app.route("/health", methods=["GET"])
